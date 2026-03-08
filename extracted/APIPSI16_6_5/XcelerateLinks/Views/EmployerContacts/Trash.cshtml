@@ -1,0 +1,61 @@
+@model IEnumerable<XcelerateLinks.Mvc.Controllers.EmployerContactsController.ContactRow>
+@{
+    ViewData["Title"] = "Arquivo – Contactos Descartados";
+    var companyId = (int)ViewBag.CompanyId;
+}
+
+<style>
+    .contact-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:0.9rem 1.2rem; margin-bottom:0.65rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; opacity:0.75; }
+    .contact-avatar { width:42px; height:42px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,#555,#888); display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:700; color:#fff; }
+    .contact-avatar img { width:42px; height:42px; border-radius:50%; object-fit:cover; }
+    .contact-info { flex:1; min-width:140px; }
+    .contact-name { font-weight:700; font-size:0.92rem; }
+    .contact-meta { font-size:0.76rem; color:#a8b2c1; margin-top:0.12rem; }
+    .btn-sm-restore { border-radius:20px; padding:0.22rem 0.7rem; font-size:0.76rem; border:1px solid rgba(0,221,85,0.35); color:#00DD55; background:transparent; cursor:pointer; }
+    .btn-sm-restore:hover { background:rgba(0,221,85,0.07); }
+</style>
+
+<div class="container py-4">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;">
+        <h1 style="font-size:1.4rem;font-weight:800;margin:0;">🗑 Arquivo de Contactos</h1>
+        <a asp-action="Index" asp-route-companyId="@companyId" class="btn btn-sm btn-outline-secondary">← Contactos ativos</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div style="text-align:center;padding:3rem 1rem;color:#a8b2c1;">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">✅</div>
+            <p>Nenhum contacto arquivado.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var c in Model.OrderByDescending(x => x.LastContactAt))
+        {
+            var initials = string.IsNullOrWhiteSpace(c.UserName) ? "?" :
+                (c.UserName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                    ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper()) : "?");
+
+            <div class="contact-card">
+                <div class="contact-avatar">
+                    @if (!string.IsNullOrEmpty(c.UserPicture)) { <img src="@c.UserPicture" alt="@c.UserName" /> }
+                    else { @initials }
+                </div>
+                <div class="contact-info">
+                    <div class="contact-name">@(c.UserName ?? "Utilizador")</div>
+                    <div class="contact-meta">
+                        @if (!string.IsNullOrEmpty(c.OpportunityTitle)) { <span>Vaga: @c.OpportunityTitle</span> }
+                        <span style="margin-left:0.4rem;">· @c.LastContactAt.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </div>
+                <span style="font-size:0.76rem;color:#a8b2c1;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:0.18rem 0.55rem;">@(c.Outcome ?? "-")</span>
+                <form method="post" asp-action="Restore">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="historyId" value="@c.EmployerCandidateHistoryId" />
+                    <input type="hidden" name="companyId" value="@companyId" />
+                    <button type="submit" class="btn-sm-restore">↩ Restaurar</button>
+                </form>
+            </div>
+        }
+    }
+</div>

@@ -1,0 +1,141 @@
+@using System.Security.Claims
+@using XcelerateLinks.Mvc.Controllers
+@{
+    ViewData["Title"] = "Tornar-me Empregador";
+}
+
+<style>
+    .employer-req-container { max-width: 580px; margin: 0 auto; padding: 2rem 0; }
+    .employer-req-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 2rem; animation: fadeUp 0.35s ease both; }
+    .employer-req-card h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .employer-req-card .subtitle { font-size: 0.88rem; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 1.75rem; }
+
+    .info-box { background: rgba(0,82,204,0.08); border: 1px solid rgba(0,82,204,0.2); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.85rem; }
+    .info-box strong { display: block; margin-bottom: 0.4rem; }
+    .info-box ul { margin: 0; padding-left: 1.1rem; }
+    .info-box li { margin-bottom: 0.25rem; color: var(--dark-text-muted,#a8b2c1); }
+
+    .upload-area { border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: border-color 0.2s, background 0.2s; cursor: pointer; }
+    .upload-area:hover { border-color: rgba(0,82,204,0.4); background: rgba(0,82,204,0.04); }
+    .upload-area input[type=file] { display: none; }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .upload-text { font-size: 0.88rem; color: var(--dark-text-muted,#a8b2c1); }
+    .upload-text strong { color: #4f8ef7; }
+    .upload-hint { font-size: 0.75rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.35rem; }
+    .file-preview { font-size: 0.82rem; color: #00DD55; margin-top: 0.5rem; }
+
+    .btn-req { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.7rem 2rem; font-size: 0.95rem; font-weight: 600; transition: background 0.15s, transform 0.1s; }
+    .btn-req:hover { background: #0040A0; transform: translateY(-1px); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 30px; padding: 0.7rem 1.5rem; font-size: 0.95rem; text-decoration: none; display: inline-block; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.05); color: inherit; }
+</style>
+
+<div class="container py-4">
+    <div class="employer-req-container">
+        <a asp-action="Profile" class="btn btn-sm btn-outline-secondary mb-4">← O Meu Perfil</a>
+
+        <div class="employer-req-card">
+            <h2>🏢 Tornar-me Empregador</h2>
+            <p class="subtitle">Torna-te um empregador para criar vagas e gerir candidatos na Xcelerate Links.</p>
+
+            <div class="info-box">
+                <strong>O que podes fazer como empregador:</strong>
+                <ul>
+                    <li>Publicar oportunidades de emprego</li>
+                    <li>Gerir candidaturas e o pipeline de recrutamento</li>
+                    <li>Representar e gerir o perfil da tua empresa</li>
+                    <li>Adicionar membros à equipa</li>
+                </ul>
+            </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger">@ViewBag.Error</div>
+            }
+
+            <form asp-action="RequestEmployer" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- Company selection -->
+                <div class="form-group-styled mb-4">
+                    <label style="font-size:0.85rem;font-weight:600;color:var(--dark-text-muted,#a8b2c1);display:block;margin-bottom:0.5rem;">Empresa (opcional)</label>
+                    <div style="position:relative;">
+                        <input type="text" id="companySearch" placeholder="Pesquisar empresa..." autocomplete="off"
+                               style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:0.55rem 0.9rem;color:inherit;font-size:0.9rem;outline:none;margin-bottom:0.4rem;" />
+                        <select name="companyId" id="companySelect"
+                                style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:0.55rem 0.85rem;color:inherit;font-size:0.9rem;outline:none;max-height:160px;overflow-y:auto;">
+                            <option value="">— Sem empresa associada —</option>
+                            @foreach (var c in (ViewBag.Companies as IEnumerable<UsersController.CompanyInfo> ?? Enumerable.Empty<UsersController.CompanyInfo>()))
+                            {
+                                <option value="@c.CompanyId">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <small style="font-size:0.75rem;color:var(--dark-text-muted,#a8b2c1);">Seleciona a empresa à qual te queres associar.</small>
+                </div>
+
+                <!-- Role within company -->
+                <div class="form-group-styled mb-4" id="roleGroup" style="display:none;">
+                    <label style="font-size:0.85rem;font-weight:600;color:var(--dark-text-muted,#a8b2c1);display:block;margin-bottom:0.5rem;">Função na empresa</label>
+                    <select name="requestedCompanyRole"
+                            style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:0.55rem 0.85rem;color:inherit;font-size:0.9rem;outline:none;">
+                        <option value="1">🔍 Recrutador — Publica e gere vagas de recrutamento</option>
+                        <option value="2">👔 Gestor de RH — Gere candidaturas e pode fazer ofertas</option>
+                        <option value="3">🏢 Admin de Empresa — Acesso total, pode gerir a equipa</option>
+                    </select>
+                    <small style="font-size:0.75rem;color:var(--dark-text-muted,#a8b2c1);">A função final será definida pelo administrador ao aprovar o pedido.</small>
+                </div>
+
+                <!-- Note -->
+                <div class="form-group-styled mb-4">
+                    <label style="font-size:0.85rem;font-weight:600;color:var(--dark-text-muted,#a8b2c1);display:block;margin-bottom:0.5rem;">Nota / Motivo (opcional)</label>
+                    <textarea name="note" rows="3" placeholder="Explica brevemente porquê pretendes ser empregador nesta plataforma..."
+                              style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:0.55rem 0.9rem;color:inherit;font-size:0.9rem;outline:none;resize:vertical;"></textarea>
+                </div>
+
+                <div class="upload-area" onclick="document.getElementById('docFile').click()">
+                    <input type="file" id="docFile" name="document" accept=".pdf,.jpg,.jpeg,.png" onchange="showPreview(this)" />
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text"><strong>Carrega um documento</strong> ou clica para selecionar</div>
+                    <div class="upload-hint">PDF, JPG ou PNG · Máx. 5MB · Identificação, carta de empresa, etc.</div>
+                    <div class="file-preview" id="filePreview"></div>
+                </div>
+
+                <div class="d-flex gap-3 align-items-center flex-wrap">
+                    <button type="submit" class="btn-req">Submeter pedido</button>
+                    <a asp-action="Profile" class="btn-cancel">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showPreview(input) {
+    const preview = document.getElementById('filePreview');
+    if (input.files && input.files[0]) {
+        preview.textContent = '✓ ' + input.files[0].name;
+    }
+}
+// Company search filter
+const compSearch = document.getElementById('companySearch');
+const compSelect = document.getElementById('companySelect');
+if (compSearch && compSelect) {
+    compSearch.addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        Array.from(compSelect.options).forEach(function(opt) {
+            if (!opt.value) return;
+            opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+    // Show/hide role group based on company selection
+    compSelect.addEventListener('change', function() {
+        var roleGroup = document.getElementById('roleGroup');
+        if (roleGroup) roleGroup.style.display = this.value ? 'block' : 'none';
+    });
+}
+</script>

@@ -1,0 +1,72 @@
+﻿@model XcelerateLinks.Models.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Criar conta";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+}
+
+<a href="/" class="back-to-home">← Voltar ao Início</a>
+
+<section class="login-hero login-centered">
+    <div class="hero-right">
+        <div class="login-card">
+
+            <div class="card-illustration" aria-hidden="true">
+                <img src="~/images/xcelerate-logo.png" alt="" class="illustration-logo" />
+                <h4>Junte-se ao Xcelerate Links</h4>
+                <p class="illustration-subtitle">Crie a sua conta e comece a partilhar oportunidades hoje.</p>
+            </div>
+
+            <div class="card-form">
+                <header class="card-header" role="banner">
+                    <img src="~/images/xcelerate-logo.png" alt="Xcelerate Links" class="logo" />
+                    <h3>Criar nova conta</h3>
+                    <p class="card-sub">Junte-se à comunidade Xcelerate Links</p>
+                </header>
+
+                <form asp-action="Register" method="post" class="mt-2" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label">Nome Completo</label>
+                        <input asp-for="Name" class="form-control" placeholder="Seu nome completo" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" placeholder="email@exemplo.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label">Utilizador</label>
+                        <input asp-for="Username" class="form-control" placeholder="nome de utilizador único" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">Senha</label>
+                        <input asp-for="Password" class="form-control" placeholder="senha segura" type="password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ConfirmPassword" class="form-label">Confirmar Senha</label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="repita a senha" type="password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="login-btn">Criar conta</button>
+                    <a class="secondary-link" href="/Account/Login">Já tem conta? Entrar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

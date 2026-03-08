@@ -1,0 +1,288 @@
+@using XcelerateLinks.Mvc.Controllers
+@{
+    ViewData["Title"] = "Lucro & Receita";
+    var rev = ViewBag.Revenue as HomeController.RevenueStats ?? new HomeController.RevenueStats();
+    int totalPaying = rev.ProCount + rev.EnterpriseCount;
+}
+
+<style>
+    .profit-page { max-width: 1100px; margin: 0 auto; padding: 2rem 0 4rem; }
+    .profit-hero { margin-bottom: 2rem; }
+    .profit-hero h1 { font-size: 1.9rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .profit-hero p { color: var(--dark-text-muted,#a8b2c1); margin: 0; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .kpi-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 1.5rem 1.25rem;
+    }
+    .kpi-card.highlight { border-color: rgba(0,82,204,0.4); background: rgba(0,82,204,0.07); }
+    .kpi-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .kpi-sub { font-size: 0.78rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.3rem; }
+
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    @@media(max-width:768px) { .charts-row { grid-template-columns: 1fr; } }
+    .chart-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 1.5rem;
+    }
+    .chart-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+    .plan-breakdown { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 0.5rem; }
+    .plan-breakdown th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dark-text-muted,#a8b2c1); padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .plan-breakdown td { padding: 0.75rem; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .plan-breakdown tr:last-child td { border-bottom: none; }
+
+    .pill-plan { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.7rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+    .pill-free { background: rgba(107,114,128,0.15); color: #9ca3af; }
+    .pill-pro { background: rgba(0,82,204,0.15); color: #60a5fa; }
+    .pill-ent { background: rgba(0,221,85,0.12); color: #34d399; }
+</style>
+
+<div class="container">
+    <div class="profit-page">
+        <a asp-action="AdminIndex" class="btn btn-sm btn-outline-secondary mb-4">← Dashboard Admin</a>
+
+        <div class="profit-hero">
+            <h1>💰 Receita & Lucro</h1>
+            <p>Visão geral da receita estimada com base nas subscrições ativas dos utilizadores.</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card highlight">
+                <div class="kpi-label">Receita Mensal (Bruta)</div>
+                <div class="kpi-value" style="color:#4f8ef7;">€@rev.MonthlyRevenue.ToString("N2")</div>
+                <div class="kpi-sub">estimativa com planos ativos</div>
+            </div>
+            <div class="kpi-card highlight">
+                <div class="kpi-label">Receita Anual (Bruta)</div>
+                <div class="kpi-value" style="color:#34d399;">€@rev.YearlyRevenue.ToString("N2")</div>
+                <div class="kpi-sub">projeção a 12 meses</div>
+            </div>
+            <div class="kpi-card" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.06);">
+                <div class="kpi-label">Impostos Mensais (@((rev.TaxRate * 100).ToString("F0"))% IRC)</div>
+                <div class="kpi-value" style="color:#f87171;">-€@rev.MonthlyTax.ToString("N2")</div>
+                <div class="kpi-sub">imposto sobre o rendimento das empresas</div>
+            </div>
+            <div class="kpi-card" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.06);">
+                <div class="kpi-label">Impostos Anuais (@((rev.TaxRate * 100).ToString("F0"))% IRC)</div>
+                <div class="kpi-value" style="color:#f87171;">-€@rev.YearlyTax.ToString("N2")</div>
+                <div class="kpi-sub">estimativa anual de impostos</div>
+            </div>
+            <div class="kpi-card" style="border-color:rgba(0,221,85,0.35);background:rgba(0,221,85,0.06);">
+                <div class="kpi-label">Lucro Líquido Mensal</div>
+                <div class="kpi-value" style="color:#4ade80;">€@rev.MonthlyProfit.ToString("N2")</div>
+                <div class="kpi-sub">após impostos (IRC 23%)</div>
+            </div>
+            <div class="kpi-card" style="border-color:rgba(0,221,85,0.35);background:rgba(0,221,85,0.06);">
+                <div class="kpi-label">Lucro Líquido Anual</div>
+                <div class="kpi-value" style="color:#4ade80;">€@rev.YearlyProfit.ToString("N2")</div>
+                <div class="kpi-sub">projeção líquida a 12 meses</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total de Utilizadores</div>
+                <div class="kpi-value">@rev.TotalUsers</div>
+                <div class="kpi-sub">excluindo administradores</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Utilizadores Pagantes</div>
+                <div class="kpi-value" style="color:#f59e0b;">@totalPaying</div>
+                <div class="kpi-sub">Pro + Enterprise</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Taxa de Conversão</div>
+                @{
+                    var convRate = rev.TotalUsers > 0 ? (totalPaying * 100.0 / rev.TotalUsers) : 0;
+                }
+                <div class="kpi-value" style="color:#a78bfa;">@convRate.ToString("F1")%</div>
+                <div class="kpi-sub">utilizadores gratuitos → pagantes</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+            <!-- Pie: Plan distribution -->
+            <div class="chart-card">
+                <h3>📊 Distribuição de Planos</h3>
+                <div style="position:relative;height:260px;">
+                    <canvas id="planPieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar: Monthly activity (applications) -->
+            <div class="chart-card">
+                <h3>📈 Candidaturas por Mês (últimos 12 meses)</h3>
+                <div style="position:relative;height:260px;">
+                    <canvas id="activityBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Projection Bar Chart -->
+        <div class="chart-card mb-4">
+            <h3>💵 Receita Bruta vs. Lucro Líquido por Plano (baseada em planos atuais, IRC 23%)</h3>
+            <div style="position:relative;height:200px;">
+                <canvas id="revenueBarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Breakdown Table -->
+        <div class="chart-card">
+            <h3>📋 Detalhes por Plano</h3>
+            <table class="plan-breakdown">
+                <thead>
+                    <tr>
+                        <th>Plano</th>
+                        <th>Utilizadores</th>
+                        <th>Preço/mês</th>
+                        <th>Receita mensal</th>
+                        <th>Receita anual</th>
+                        <th>Impostos mensais (@((rev.TaxRate * 100).ToString("F0"))%)</th>
+                        <th>Lucro líquido mensal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="pill-plan pill-free">🌱 Free</span></td>
+                        <td>@rev.FreeCount</td>
+                        <td>€0,00</td>
+                        <td>€0,00</td>
+                        <td>€0,00</td>
+                        <td style="color:#f87171;">€0,00</td>
+                        <td style="color:#4ade80;">€0,00</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pill-plan pill-pro">🚀 Pro</span></td>
+                        <td>@rev.ProCount</td>
+                        <td>€@rev.ProPrice.ToString("N2")</td>
+                        <td>€@((rev.ProCount * rev.ProPrice).ToString("N2"))</td>
+                        <td>€@((rev.ProCount * rev.ProPrice * 12).ToString("N2"))</td>
+                        <td style="color:#f87171;">-€@((rev.ProCount * rev.ProPrice * rev.TaxRate).ToString("N2"))</td>
+                        <td style="color:#4ade80;">€@((rev.ProCount * rev.ProPrice * (1 - rev.TaxRate)).ToString("N2"))</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pill-plan pill-ent">🏢 Enterprise</span></td>
+                        <td>@rev.EnterpriseCount</td>
+                        <td>€@rev.EnterprisePrice.ToString("N2")</td>
+                        <td>€@((rev.EnterpriseCount * rev.EnterprisePrice).ToString("N2"))</td>
+                        <td>€@((rev.EnterpriseCount * rev.EnterprisePrice * 12).ToString("N2"))</td>
+                        <td style="color:#f87171;">-€@((rev.EnterpriseCount * rev.EnterprisePrice * rev.TaxRate).ToString("N2"))</td>
+                        <td style="color:#4ade80;">€@((rev.EnterpriseCount * rev.EnterprisePrice * (1 - rev.TaxRate)).ToString("N2"))</td>
+                    </tr>
+                    <tr style="font-weight:700;">
+                        <td>TOTAL</td>
+                        <td>@rev.TotalUsers</td>
+                        <td>—</td>
+                        <td style="color:#4f8ef7;">€@rev.MonthlyRevenue.ToString("N2")</td>
+                        <td style="color:#34d399;">€@rev.YearlyRevenue.ToString("N2")</td>
+                        <td style="color:#f87171;">-€@rev.MonthlyTax.ToString("N2")</td>
+                        <td style="color:#4ade80;">€@rev.MonthlyProfit.ToString("N2")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var isDark = document.body.classList.contains('dark') || document.documentElement.getAttribute('data-bs-theme') === 'dark' || true;
+    Chart.defaults.color = '#a8b2c1';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+
+    // Pie chart
+    var pieCtx = document.getElementById('planPieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Free', 'Pro', 'Enterprise'],
+            datasets: [{
+                data: [@rev.FreeCount, @rev.ProCount, @rev.EnterpriseCount],
+                backgroundColor: ['rgba(107,114,128,0.6)','rgba(0,82,204,0.7)','rgba(0,221,85,0.6)'],
+                borderColor: ['#6b7280','#0052CC','#00DD55'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } }
+            }
+        }
+    });
+
+    // Activity bar chart
+    var actLabels = [@Html.Raw(string.Join(",", (rev.MonthlyActivity ?? new List<HomeController.MonthlyActivityItem>()).Select(m => $"\"{m.Label}\"")))];
+    var actData = [@Html.Raw(string.Join(",", (rev.MonthlyActivity ?? new List<HomeController.MonthlyActivityItem>()).Select(m => m.ApplicationCount)))];
+    var barCtx = document.getElementById('activityBarChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: actLabels,
+            datasets: [{
+                label: 'Candidaturas',
+                data: actData,
+                backgroundColor: 'rgba(0,82,204,0.5)',
+                borderColor: '#0052CC',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { maxRotation: 45, font: { size: 10 } } },
+                y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, ticks: { precision: 0 } }
+            }
+        }
+    });
+
+    // Revenue projection bar
+    var revCtx = document.getElementById('revenueBarChart').getContext('2d');
+    new Chart(revCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Free (€0)', 'Pro (€@rev.ProPrice/mês)', 'Enterprise (€@rev.EnterprisePrice/mês)'],
+                    datasets: [
+                        {
+                            label: 'Receita Bruta Mensal (€)',
+                            data: [0, @(rev.ProCount* rev.ProPrice), @(rev.EnterpriseCount* rev.EnterprisePrice)],
+                            backgroundColor: ['rgba(107,114,128,0.4)','rgba(0,82,204,0.6)','rgba(0,221,85,0.5)'],
+                            borderColor: ['#6b7280','#0052CC','#00DD55'],
+                            borderWidth: 2,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Lucro Líquido Mensal (€) após @((rev.TaxRate * 100).ToString("F0"))% IRC',
+                            data: [0, @(rev.ProCount* rev.ProPrice * (1 - rev.TaxRate)), @(rev.EnterpriseCount* rev.EnterprisePrice * (1 - rev.TaxRate))],
+                            backgroundColor: ['rgba(107,114,128,0.2)','rgba(74,222,128,0.5)','rgba(74,222,128,0.4)'],
+                            borderColor: ['#6b7280','#4ade80','#4ade80'],
+                            borderWidth: 2,
+                            borderRadius: 6
+                        }
+                    ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    beginAtZero: true,
+                    ticks: { callback: function(v) { return '€' + v; } }
+                }
+            }
+        }
+    });
+})();
+</script>
+}

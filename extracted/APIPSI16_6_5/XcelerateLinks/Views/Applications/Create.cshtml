@@ -1,0 +1,301 @@
+@model XcelerateLinks.Mvc.Controllers.ApplicationsController.JobApplicationCreateViewModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Candidatar-me";
+    var opp = ViewBag.Opportunity as APIPSI16.Models.Opportunity;
+}
+
+<style>
+    .apply-container { max-width: 680px; margin: 0 auto; padding: 2rem 0; }
+
+    .apply-header {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+        display: flex; gap: 1rem; align-items: flex-start;
+        animation: slideDown 0.35s ease both;
+    }
+    .apply-logo {
+        width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+        background: linear-gradient(135deg,rgba(0,82,204,0.25),rgba(0,221,85,0.1));
+        display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+    .apply-job-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .apply-company { font-size: 0.88rem; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.1rem; }
+
+    .apply-form-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 1.75rem;
+        animation: fadeUp 0.4s ease both 0.1s;
+    }
+    .apply-section { margin-bottom: 1.75rem; }
+    .apply-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @@media(max-width:600px) { .field-row { grid-template-columns: 1fr; } }
+
+    .form-group-styled { margin-bottom: 1rem; }
+    .form-group-styled label { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--dark-text-muted,#a8b2c1); display: block; }
+    .form-group-styled .form-control,
+    .form-group-styled .form-select {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: inherit;
+        border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.9rem; width: 100%;
+        transition: border-color 0.2s;
+    }
+    .form-group-styled .form-control:focus,
+    .form-group-styled .form-select:focus { background: rgba(255,255,255,0.08); border-color: #0052CC; box-shadow: none; color: inherit; outline: none; }
+    .form-group-styled .form-select option { background: #141829; }
+    .form-group-styled textarea.form-control { resize: vertical; min-height: 100px; }
+
+    .char-count { font-size: 0.72rem; color: var(--dark-text-muted,#a8b2c1); text-align: right; margin-top: 0.2rem; }
+
+    .toggle-row { display: flex; align-items: center; gap: 0.75rem; }
+    .toggle-label { font-size: 0.9rem; }
+    .toggle-input { width: 18px; height: 18px; accent-color: #0052CC; }
+
+    .btn-submit-app {
+        background: #0052CC; color: #fff; border: none; border-radius: 30px;
+        padding: 0.7rem 2.5rem; font-size: 0.95rem; font-weight: 600;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .btn-submit-app:hover { background: #0040A0; transform: translateY(-1px); }
+    .btn-cancel-app {
+        background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit;
+        border-radius: 30px; padding: 0.7rem 2rem; font-size: 0.95rem; text-decoration: none; display: inline-block;
+    }
+    .btn-cancel-app:hover { background: rgba(255,255,255,0.05); color: inherit; }
+
+    .progress-steps { display: flex; gap: 0; margin-bottom: 1.5rem; }
+    .prog-step { flex: 1; text-align: center; position: relative; }
+    .prog-step::before { content: ''; position: absolute; top: 14px; left: 50%; right: -50%; height: 2px; background: rgba(255,255,255,0.1); z-index: 0; }
+    .prog-step:last-child::before { display: none; }
+    .prog-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; position: relative; z-index: 1; margin-bottom: 0.4rem; transition: border-color 0.2s, background 0.2s; }
+    .prog-step.done .prog-dot { border-color: #00DD55; background: rgba(0,221,85,0.15); color: #00DD55; }
+    .prog-step.active .prog-dot { border-color: #0052CC; background: rgba(0,82,204,0.2); color: #4f8ef7; }
+    .prog-label { font-size: 0.68rem; color: var(--dark-text-muted,#a8b2c1); }
+    .prog-step.active .prog-label { color: #4f8ef7; }
+</style>
+
+<div class="apply-container">
+    <a asp-controller="Opportunities" asp-action="Index" class="btn btn-sm btn-outline-secondary mb-4">← Voltar às oportunidades</a>
+
+    @if (opp != null)
+    {
+        <div class="apply-header">
+            <div class="apply-logo">🏢</div>
+            <div>
+                <div class="apply-job-title">@(opp.Title ?? "Oportunidade")</div>
+                <div class="apply-company">@(opp.Company?.Name ?? (opp.CompanyId.HasValue ? $"Empresa #{opp.CompanyId}" : ""))</div>
+                @if (!string.IsNullOrEmpty(opp.Location)) { <div class="apply-company">📍 @opp.Location</div> }
+                @if (!string.IsNullOrEmpty(opp.RequiredJobRoleIds))
+                {
+                    var jobRoles = ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+                    var roleIds = new HashSet<string>(opp.RequiredJobRoleIds.Split(',', StringSplitOptions.RemoveEmptyEntries));
+                    var matched = jobRoles.Where(jr => roleIds.Contains(jr.Id.ToString())).ToList();
+                    if (matched.Any())
+                    {
+                        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;">
+                            @foreach (var jr in matched)
+                            {
+                                <span style="background:rgba(0,82,204,0.12);border:1px solid rgba(0,82,204,0.3);color:#4f8ef7;border-radius:20px;padding:0.15rem 0.65rem;font-size:0.75rem;">💼 @jr.Name</span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Progress indicator -->
+    <div class="progress-steps mb-4">
+        <div class="prog-step done"><div class="prog-dot">✓</div><div class="prog-label">Oportunidade</div></div>
+        <div class="prog-step active"><div class="prog-dot">2</div><div class="prog-label">Candidatura</div></div>
+        <div class="prog-step"><div class="prog-dot">3</div><div class="prog-label">Submissão</div></div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div>
+    }
+
+    <div class="apply-form-card">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            @* OpportunityId is always set from the route and model — hidden input uses only asp-for *@
+            <input type="hidden" asp-for="Application.OpportunityId" />
+
+            <!-- Personal info -->
+            <div class="apply-section">
+                <div class="apply-section-title">Informação Pessoal</div>
+                <div class="field-row">
+                    <div class="form-group-styled">
+                        <label asp-for="Application.Name">Nome completo</label>
+                        <input asp-for="Application.Name" class="form-control" placeholder="O teu nome..." />
+                        <span asp-validation-for="Application.Name" class="text-danger"></span>
+                    </div>
+                    <div class="form-group-styled">
+                        <label asp-for="Application.PhoneNumber">Número de telefone</label>
+                        <input asp-for="Application.PhoneNumber" class="form-control" placeholder="+351 9xx xxx xxx" />
+                        <span asp-validation-for="Application.PhoneNumber" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="form-group-styled">
+                        <label asp-for="Application.LinkedInUrl">Perfil LinkedIn</label>
+                        <input asp-for="Application.LinkedInUrl" class="form-control" placeholder="https://linkedin.com/in/..." />
+                        <span asp-validation-for="Application.LinkedInUrl" class="text-danger"></span>
+                    </div>
+                    <div class="form-group-styled">
+                        <label asp-for="Application.PortfolioUrl">Portefólio / Website</label>
+                        <input asp-for="Application.PortfolioUrl" class="form-control" placeholder="https://..." />
+                        <span asp-validation-for="Application.PortfolioUrl" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experience -->
+            <div class="apply-section">
+                <div class="apply-section-title">Experiência</div>
+                <div class="field-row">
+                    <div class="form-group-styled">
+                        <label asp-for="Application.YearsOfExperience">Anos de experiência</label>
+                        <select asp-for="Application.YearsOfExperience" class="form-select">
+                            <option value="">Seleciona...</option>
+                            <option value="0">Sem experiência</option>
+                            <option value="1">1 ano</option>
+                            <option value="2">2 anos</option>
+                            <option value="3">3 anos</option>
+                            <option value="5">4–5 anos</option>
+                            <option value="7">6–10 anos</option>
+                            <option value="15">+10 anos</option>
+                        </select>
+                        <span asp-validation-for="Application.YearsOfExperience" class="text-danger"></span>
+                    </div>
+                    <div class="form-group-styled">
+                        <label style="margin-bottom:0.75rem;">Preferências de trabalho</label>
+                        <div class="toggle-row">
+                            <input asp-for="Application.OpenToRemote"
+                                   class="toggle-input"
+                                   id="openRemote" />
+                            <label for="openRemote" class="toggle-label">Disponível para trabalho remoto</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Roles -->
+            @{
+                var allRoles = ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+                var roleList = allRoles.ToList();
+                // Opportunity's required roles highlighted
+                var opp2 = ViewBag.Opportunity as APIPSI16.Models.Opportunity;
+                var requiredIds = (opp2?.RequiredJobRoleIds ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s.Trim(), out var n) ? (int?)n : null)
+                    .Where(n => n.HasValue).Select(n => n!.Value)
+                    .ToHashSet();
+            }
+            @if (roleList.Any())
+            {
+                <div class="apply-section">
+                    <div class="apply-section-title">Áreas de trabalho</div>
+                    <p style="font-size:0.82rem;color:#a8b2c1;margin-bottom:0.75rem;">Seleciona as funções às quais te candidatas.</p>
+                    <input type="hidden" asp-for="Application.SelectedJobRoleIds" id="selectedJobRoleIds" />
+                    <div id="job-roles-selector" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                        @foreach (var role in roleList)
+                        {
+                            var isRequired = requiredIds.Contains(role.Id);
+                            <button type="button"
+                                    class="role-tag-btn @(isRequired ? "role-tag-required" : "")"
+                                    data-id="@role.Id"
+                                    style="background:@(isRequired ? "rgba(0,82,204,0.15)" : "rgba(255,255,255,0.05)");border:1px solid @(isRequired ? "rgba(0,82,204,0.5)" : "rgba(255,255,255,0.12)");color:@(isRequired ? "#4f8ef7" : "inherit");border-radius:20px;padding:0.3rem 0.85rem;font-size:0.8rem;cursor:pointer;transition:all 0.15s;"
+                                    onclick="toggleRole(this)">
+                                @(isRequired ? "💼 " : "")@role.Name
+                            </button>
+                        }
+                    </div>
+                    <span asp-validation-for="Application.SelectedJobRoleIds" class="text-danger" style="display:block;margin-top:0.4rem;font-size:0.8rem;"></span>
+                </div>
+            }
+
+            <!-- Cover letter -->
+            <div class="apply-section">
+                <div class="apply-section-title">Carta de Apresentação</div>
+                <div class="form-group-styled">
+                    <label asp-for="Application.CoverLetter">Apresenta-te ao recrutador</label>
+                    <textarea asp-for="Application.CoverLetter" class="form-control" id="coverLetter"
+                              placeholder="Explica porque és a pessoa certa para esta oportunidade..."
+                              maxlength="2000"></textarea>
+                    <div class="char-count"><span id="clCount">0</span>/2000</div>
+                    <span asp-validation-for="Application.CoverLetter" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 align-items-center">
+                <button type="submit" class="btn-submit-app">Submeter candidatura →</button>
+                <a asp-controller="Opportunities" asp-action="Index" class="btn-cancel-app">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+    const ta = document.getElementById('coverLetter');
+    const cnt = document.getElementById('clCount');
+    if (ta && cnt) {
+        cnt.textContent = ta.value.length;
+        ta.addEventListener('input', () => cnt.textContent = ta.value.length);
+    }
+
+    // Job role multi-select toggle
+    // Initialize from the hidden field value (preserves selections on form error re-render)
+    var hiddenField = document.getElementById('selectedJobRoleIds');
+    var selectedRoleIds = new Set(
+        (hiddenField && hiddenField.value) ? hiddenField.value.split(',').filter(Boolean) : []
+    );
+
+    function applyRoleUI(btn, selected) {
+        if (selected) {
+            btn.style.background = 'rgba(0,221,85,0.12)';
+            btn.style.border = '1px solid rgba(0,221,85,0.4)';
+            btn.style.color = '#00DD55';
+            btn.style.fontWeight = '600';
+        } else {
+            // Restore: if it was a required role keep blue hint, else default
+            var isRequired = btn.classList.contains('role-tag-required');
+            btn.style.background = isRequired ? 'rgba(0,82,204,0.15)' : 'rgba(255,255,255,0.05)';
+            btn.style.border = '1px solid ' + (isRequired ? 'rgba(0,82,204,0.5)' : 'rgba(255,255,255,0.12)');
+            btn.style.color = isRequired ? '#4f8ef7' : 'inherit';
+            btn.style.fontWeight = 'normal';
+        }
+    }
+
+    function toggleRole(btn) {
+        var id = btn.dataset.id;
+        if (selectedRoleIds.has(id)) {
+            selectedRoleIds.delete(id);
+        } else {
+            selectedRoleIds.add(id);
+        }
+        applyRoleUI(btn, selectedRoleIds.has(id));
+        if (hiddenField) hiddenField.value = Array.from(selectedRoleIds).join(',');
+    }
+
+    // On load: sync UI with already-selected IDs (from hidden field or pre-select required roles)
+    document.querySelectorAll('#job-roles-selector .role-tag-btn').forEach(function(btn) {
+        var id = btn.dataset.id;
+        if (selectedRoleIds.has(id)) {
+            // Already selected from a previous form submission
+            applyRoleUI(btn, true);
+        } else if (btn.classList.contains('role-tag-required')) {
+            // Auto-select opportunity's required roles on first load
+            selectedRoleIds.add(id);
+            applyRoleUI(btn, true);
+        }
+    });
+    if (hiddenField) hiddenField.value = Array.from(selectedRoleIds).join(',');
+</script>
+}

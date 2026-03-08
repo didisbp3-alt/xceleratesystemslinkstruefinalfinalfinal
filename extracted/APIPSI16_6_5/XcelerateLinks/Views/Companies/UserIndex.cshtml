@@ -1,0 +1,169 @@
+@model IEnumerable<APIPSI16.Models.Company>
+@{
+    ViewData["Title"] = "Empresas";
+}
+
+<style>
+    .companies-hero {
+        background: linear-gradient(135deg, rgba(0,82,204,0.12), rgba(0,221,85,0.06));
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .companies-hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .companies-hero p { color: var(--dark-text-muted,#a8b2c1); margin: 0; }
+
+    .companies-search { max-width: 520px; margin-top: 1.25rem; }
+    .companies-search .input-group input {
+        background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: inherit;
+        border-radius: 30px 0 0 30px;
+    }
+    .companies-search .input-group input:focus { border-color: #0052CC; box-shadow: none; background: rgba(255,255,255,0.09); color: inherit; }
+    .companies-search .btn { border-radius: 0 30px 30px 0; }
+
+    .companies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+
+    .company-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.2s, border-color 0.2s;
+        display: flex; flex-direction: column;
+    }
+    .company-card:hover { transform: translateY(-3px); border-color: rgba(0,82,204,0.4); }
+
+    .company-banner {
+        height: 72px;
+        background: linear-gradient(135deg, rgba(0,82,204,0.25), rgba(0,221,85,0.12));
+    }
+    .company-banner img { width: 100%; height: 100%; object-fit: cover; }
+
+    .company-body { padding: 0 1.25rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+
+    .company-logo-wrap { margin-top: -28px; margin-bottom: 0.6rem; }
+    .company-logo {
+        width: 56px; height: 56px; border-radius: 10px; border: 3px solid #0b1220;
+        object-fit: cover;
+    }
+    .company-logo-placeholder {
+        width: 56px; height: 56px; border-radius: 10px; border: 3px solid #0b1220;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.2rem; color: #fff; font-weight: 700;
+    }
+    .company-name { font-size: 1.05rem; font-weight: 700; color: inherit; text-decoration: none; }
+    .company-name:hover { color: #0052CC; }
+    .company-meta { font-size: 0.82rem; color: var(--dark-text-muted,#a8b2c1); margin: 0.3rem 0 0.75rem; }
+    .company-meta span { margin-right: 0.75rem; }
+
+    .company-actions { margin-top: auto; display: flex; gap: 0.5rem; }
+    .btn-follow {
+        flex: 1; border: 1px solid #0052CC; color: #0052CC; border-radius: 30px;
+        padding: 0.35rem 0; font-size: 0.82rem; background: transparent; transition: background 0.15s; text-align: center;
+    }
+    .btn-follow:hover { background: rgba(0,82,204,0.1); }
+    .btn-view-co {
+        flex: 1; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 30px;
+        padding: 0.35rem 0; font-size: 0.82rem; background: transparent; text-decoration: none;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-view-co:hover { background: rgba(255,255,255,0.05); color: inherit; }
+
+    .no-results { text-align: center; padding: 4rem; color: var(--dark-text-muted,#a8b2c1); }
+</style>
+
+<div class="container py-4">
+    <div class="companies-hero">
+        <h1>🏢 Empresas</h1>
+        <p>Descobre empresas e as suas oportunidades de emprego.</p>
+
+        <form asp-action="Index" method="get" class="companies-search">
+            <div class="input-group">
+                <input type="search" name="search" class="form-control"
+                       placeholder="Pesquisar empresa, indústria ou localização..."
+                       value="@ViewBag.Search" />
+                <button class="btn btn-primary" type="submit">Pesquisar</button>
+            </div>
+        </form>
+    </div>
+
+    @{
+        var myCompanies = ViewBag.MyCompanies as List<XcelerateLinks.Mvc.Controllers.MyCompanyItem>;
+    }
+
+    @if (myCompanies != null && myCompanies.Any())
+    {
+        <div style="background:rgba(0,82,204,0.08);border:1px solid rgba(0,82,204,0.2);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
+            <div style="font-weight:700;margin-bottom:0.75rem;">🏢 As Minhas Empresas</div>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                @foreach (var c in myCompanies)
+                {
+                    <a href="@Url.Action("Manage","Companies",new{id=c.CompanyId})"
+                       style="background:rgba(0,82,204,0.15);border:1px solid rgba(0,82,204,0.3);color:#4f8ef7;border-radius:30px;padding:0.35rem 1rem;font-size:0.85rem;text-decoration:none;">
+                        @(c.CompanyName ?? "Empresa") ⚙️
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-warning">@ViewBag.Error</div>
+    }
+
+    @{ var list = Model.ToList(); }
+
+    @if (!list.Any())
+    {
+        <div class="no-results">
+            <p>🔍 Nenhuma empresa encontrada@(ViewBag.Search != null ? $" para \"{ViewBag.Search}\"" : "").</p>
+            @if (ViewBag.Search != null)
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm mt-2">Ver todas as empresas</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="companies-grid">
+            @foreach (var company in list)
+            {
+                var initial = !string.IsNullOrEmpty(company.Name) ? company.Name[0].ToString().ToUpper() : "?";
+
+                <div class="company-card">
+                    <div class="company-banner">
+                    </div>
+                    <div class="company-body">
+                        <div class="company-logo-wrap">
+                            @if (!string.IsNullOrEmpty(company.CompanyLogoUrl))
+                            {
+                                <img src="@company.CompanyLogoUrl" class="company-logo" alt="@company.Name" />
+                            }
+                            else
+                            {
+                                <span class="company-logo-placeholder">@initial</span>
+                            }
+                        </div>
+                        <a asp-action="Details" asp-route-id="@company.CompanyId" class="company-name">@company.Name</a>
+                        <div class="company-meta">
+                            @if (!string.IsNullOrEmpty(company.Industry))
+                            {
+                                <span>🏭 @company.Industry</span>
+                            }
+                            @if (!string.IsNullOrEmpty(company.Location))
+                            {
+                                <span>📍 @company.Location</span>
+                            }
+                        </div>
+                        <div class="company-actions">
+                            <a asp-action="Details" asp-route-id="@company.CompanyId" class="btn-view-co">Ver empresa</a>
+                            <a asp-controller="Opportunities" asp-action="Index" asp-route-q="@company.Name" class="btn-follow">Ver vagas</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

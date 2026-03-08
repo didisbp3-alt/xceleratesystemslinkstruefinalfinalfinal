@@ -1,0 +1,40 @@
+@model IEnumerable<Opportunity>
+@{
+    ViewData["Title"] = "Oportunidades";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Oportunidades</h2>
+    <a asp-action="Create" class="btn btn-primary">+ Criar oportunidade</a>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Empresa</th>
+            <th>Criador</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Title</td>
+            <td>@(item.Company?.Name ?? item.CompanyId?.ToString() ?? "-")</td>
+            <td>@(item.CreatorId?.ToString() ?? "-")</td>
+            <td class="text-end">
+                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

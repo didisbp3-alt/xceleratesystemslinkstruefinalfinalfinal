@@ -1,0 +1,109 @@
+@model APIPSI16.Models.Opportunity
+@using System.Security.Claims
+@{
+    ViewData["Title"] = Model.Title ?? "Oportunidade";
+    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+    var isAdmin = role == "0";
+    var isEmployer = role == "2";
+    var canEdit = isAdmin || isEmployer;
+
+    var employmentTypes = new Dictionary<byte, string> { {1,"Full-Time"},{2,"Part-Time"},{3,"Contract"},{4,"Internship"},{5,"Freelance"} };
+    var remoteOptions = new Dictionary<byte, string> { {0,"No local"},{1,"Híbrido"},{2,"Remoto"} };
+    var opportunityTypes = new Dictionary<byte, string> { {0,"Padrão"},{1,"Acompanhada 🟡"},{2,"Longa Duração 🔵"} };
+    var applicationScopes = new Dictionary<byte, string> { {0,"Externa"},{1,"Interna"},{2,"Mista"} };
+}
+
+<style>
+    .job-detail-header {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        display: flex; gap: 1.5rem; align-items: flex-start;
+    }
+    .job-detail-logo {
+        width: 72px; height: 72px; border-radius: 14px;
+        background: linear-gradient(135deg, rgba(0,82,204,0.2), rgba(0,221,85,0.1));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem; flex-shrink: 0;
+    }
+    .job-detail-info { flex: 1; }
+    .job-detail-title { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .job-detail-company { font-size: 1.05rem; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.75rem; }
+    .job-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .job-tag { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 0.25rem 0.75rem; font-size: 0.82rem; }
+    .job-tag.remote { border-color: rgba(0,221,85,0.3); color: #00DD55; background: rgba(0,221,85,0.06); }
+    .btn-apply-lg { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.65rem 2rem; font-size: 1rem; font-weight: 600; text-decoration: none; display: inline-block; }
+    .btn-apply-lg:hover { background: #0040A0; color: #fff; }
+    .detail-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+    .detail-card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+</style>
+
+<div class="container py-4">
+    <a asp-action="Browse" class="btn btn-sm btn-outline-secondary mb-4">← Voltar às oportunidades</a>
+
+    <div class="job-detail-header">
+        <div class="job-detail-logo">🏢</div>
+        <div class="job-detail-info">
+            <h1 class="job-detail-title">@(Model.Title ?? "Oportunidade")</h1>
+            <p class="job-detail-company">@(Model.Company?.Name ?? (Model.CompanyId.HasValue ? $"Empresa #{Model.CompanyId}" : "Empresa não especificada"))</p>
+
+            <div class="job-tags">
+                @{
+                    var locationDisplayDetail = Model.LocationNav?.Name ?? Model.Location;
+                    var countryDisplayDetail = Model.LocationNav?.Country?.Name;
+                }
+                @if (!string.IsNullOrEmpty(locationDisplayDetail))
+                {
+                    <span class="job-tag">📍 @locationDisplayDetail@(countryDisplayDetail != null ? $", {countryDisplayDetail}" : "")</span>
+                }
+                @if (Model.EmploymentType.HasValue && employmentTypes.ContainsKey(Model.EmploymentType.Value))
+                {
+                    <span class="job-tag">⏱ @employmentTypes[Model.EmploymentType.Value]</span>
+                }
+                @if (Model.RemoteOption.HasValue && remoteOptions.ContainsKey(Model.RemoteOption.Value))
+                {
+                    <span class="job-tag remote">🌐 @remoteOptions[Model.RemoteOption.Value]</span>
+                }
+                @if (Model.SeniorityLevel.HasValue)
+                {
+                    <span class="job-tag">🏅 Nível @Model.SeniorityLevel</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.RequiredJobRoleIds))
+                {
+                    var jobRoles = ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+                    var roleIds = new HashSet<string>(Model.RequiredJobRoleIds.Split(',', StringSplitOptions.RemoveEmptyEntries));
+                    var matchedRoles = jobRoles.Where(jr => roleIds.Contains(jr.Id.ToString())).ToList();
+                    @foreach (var jr in matchedRoles)
+                    {
+                        <span class="job-tag" style="border-color:rgba(0,221,85,0.3);color:#00DD55;background:rgba(0,221,85,0.06);">🟢 @jr.Name</span>
+                    }
+                }
+                @if (Model.OpportunityType.HasValue && opportunityTypes.ContainsKey(Model.OpportunityType.Value) && Model.OpportunityType.Value > 0)
+                {
+                    <span class="job-tag" style="border-color:rgba(255,200,0,0.3);color:#ffc800;background:rgba(255,200,0,0.06);">@opportunityTypes[Model.OpportunityType.Value]</span>
+                }
+                @if (Model.ApplicationScope.HasValue && applicationScopes.ContainsKey(Model.ApplicationScope.Value))
+                {
+                    <span class="job-tag">🏢 @applicationScopes[Model.ApplicationScope.Value]</span>
+                }
+
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-controller="Applications" asp-action="Create" asp-route-opportunityId="@Model.Id" class="btn-apply-lg">Candidatar-se</a>
+                @if (canEdit)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Editar</a>
+                    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">Eliminar</a>
+                    @if (Model.CompanyId.HasValue)
+                    {
+                        <a asp-controller="EmployerContacts" asp-action="Index" asp-route-companyId="@Model.CompanyId" asp-route-opportunityId="@Model.Id"
+                           class="btn btn-outline-warning" style="border-color:rgba(255,200,0,0.4);color:#ffc800;">🎯 Matches Anteriores</a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

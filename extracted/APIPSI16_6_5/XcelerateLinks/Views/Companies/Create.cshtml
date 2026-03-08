@@ -1,0 +1,147 @@
+@model Company
+@{
+    ViewData["Title"] = "Nova empresa";
+}
+
+<style>
+    .co-create-container { max-width: 700px; margin: 0 auto; padding: 2rem 0; }
+    .co-create-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 2rem; }
+    .co-create-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .field-styled { margin-bottom: 1rem; }
+    .field-styled label { font-size: 0.85rem; font-weight: 600; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.4rem; display: block; }
+    .field-styled input, .field-styled textarea {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: inherit;
+        border-radius: 10px; padding: 0.55rem 0.85rem; width: 100%; font-size: 0.9rem;
+    }
+    .field-styled input:focus, .field-styled textarea:focus { border-color: #0052CC; outline: none; }
+    .btn-save { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.65rem 2rem; font-weight: 600; }
+    .btn-save:hover { background: #0040A0; }
+</style>
+
+<div class="container py-4">
+    <div class="co-create-container">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-4">← Empresas</a>
+
+        <div class="co-create-card">
+            <h3>🏢 Nova empresa</h3>
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                <div class="field-styled">
+                    <label asp-for="Name">Nome da empresa *</label>
+                    <input asp-for="Name" placeholder="Nome da empresa..." />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="field-styled" id="industry-field">
+                    <label asp-for="Industry">Setor / Indústria</label>
+                    <div style="position:relative;">
+                        <input type="text" id="industrySearch" placeholder="Pesquisar setor..." autocomplete="off"
+                            style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:inherit;border-radius:10px;padding:0.55rem 0.85rem;width:100%;font-size:0.9rem;" />
+                        <div id="industryDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#141829;border:1px solid rgba(255,255,255,0.15);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;">
+                        </div>
+                    </div>
+                    <div id="industrySelected" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;"></div>
+                    <input type="hidden" asp-for="Industry" id="industryHidden" />
+                    <small style="color:#a8b2c1;font-size:0.75rem;">Podes selecionar vários setores.</small>
+                </div>
+
+                <div class="field-styled">
+                    <label asp-for="Location">Localização</label>
+                    <input asp-for="Location" placeholder="Ex: Lisboa, Portugal..." />
+                    <span asp-validation-for="Location" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex gap-3 align-items-center mt-3">
+                    <button type="submit" class="btn-save">Criar empresa</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+<script>
+(function() {
+    var INDUSTRIES = [
+        "Tecnologia","Software","Hardware","Inteligência Artificial","Cibersegurança",
+        "Saúde","Farmacêutica","Biotecnologia","Medicina","Cuidados de Saúde",
+        "Finanças","Banca","Seguros","Contabilidade","Investimento",
+        "Educação","Investigação","Ciência",
+        "Retalho","E-Commerce","Logística","Transportes","Automóvel",
+        "Construção","Imobiliário","Arquitetura","Engenharia",
+        "Media","Entretenimento","Marketing","Publicidade","Design",
+        "Telecomunicações","Energia","Ambiente","Alimentação","Turismo",
+        "Consultoria","Recursos Humanos","Jurídico","Governo","Sem fins lucrativos",
+        "Aeroespacial","Defesa","Manufatura","Química"
+    ].sort();
+
+    var selected = [];
+    var currentVal = (document.getElementById('industryHidden').value || '').trim();
+    if (currentVal) {
+        selected = currentVal.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+
+    function renderSelected() {
+        var div = document.getElementById('industrySelected');
+        div.innerHTML = '';
+        selected.forEach(function(s, idx) {
+            var span = document.createElement('span');
+            span.style.cssText = 'background:rgba(0,82,204,0.2);border:1px solid rgba(0,82,204,0.4);border-radius:20px;padding:0.2rem 0.6rem;font-size:0.78rem;display:inline-flex;align-items:center;gap:0.3rem;';
+            var nameNode = document.createTextNode(s + ' ');
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;padding:0;line-height:1;';
+            btn.textContent = '×';
+            btn.setAttribute('data-idx', idx);
+            btn.addEventListener('click', function() { removeIndustryByIdx(parseInt(this.getAttribute('data-idx'))); });
+            span.appendChild(nameNode);
+            span.appendChild(btn);
+            div.appendChild(span);
+        });
+        document.getElementById('industryHidden').value = selected.join(',');
+    }
+
+    function removeIndustryByIdx(idx) {
+        selected.splice(idx, 1);
+        renderSelected();
+    }
+
+    function showDropdown(q) {
+        var dd = document.getElementById('industryDropdown');
+        var filtered = INDUSTRIES.filter(function(i){ return i.toLowerCase().includes(q.toLowerCase()) && !selected.includes(i); });
+        if (!filtered.length) { dd.style.display = 'none'; return; }
+        dd.style.display = 'block';
+        dd.innerHTML = '';
+        filtered.forEach(function(name) {
+            var div = document.createElement('div');
+            div.textContent = name;
+            div.style.cssText = 'padding:0.5rem 0.75rem;cursor:pointer;font-size:0.88rem;';
+            div.addEventListener('mouseover', function(){ this.style.background = 'rgba(0,82,204,0.2)'; });
+            div.addEventListener('mouseout', function(){ this.style.background = ''; });
+            div.addEventListener('click', function(){ addIndustry(name); });
+            dd.appendChild(div);
+        });
+    }
+
+    window.addIndustry = function(name) {
+        if (!selected.includes(name)) { selected.push(name); renderSelected(); }
+        document.getElementById('industrySearch').value = '';
+        document.getElementById('industryDropdown').style.display = 'none';
+    };
+
+    document.getElementById('industrySearch').addEventListener('input', function() { showDropdown(this.value); });
+    document.getElementById('industrySearch').addEventListener('focus', function() { showDropdown(this.value); });
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('industry-field').contains(e.target))
+            document.getElementById('industryDropdown').style.display = 'none';
+    });
+
+    renderSelected();
+})();
+</script>
+}
+

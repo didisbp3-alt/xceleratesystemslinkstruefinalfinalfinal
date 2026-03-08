@@ -1,0 +1,263 @@
+@using System.Security.Claims
+@{
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+    // Don't render on the Messages page itself or auth pages
+    var ctrl = ViewContext.RouteData.Values["Controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["Action"]?.ToString();
+    var skipWidget = (ctrl == "Chats" && action == "Messages") ||
+                     (ctrl == "Account");
+}
+
+@if (User.Identity?.IsAuthenticated == true && !skipWidget)
+{
+<style>
+    #chat-widget-root { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; }
+
+    .cw-bubble {
+        width: 54px; height: 54px; border-radius: 50%;
+        background: linear-gradient(135deg,#0052CC,#0070f3);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; box-shadow: 0 4px 20px rgba(0,82,204,0.45);
+        font-size: 1.4rem; border: none; color: #fff;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+    }
+    .cw-bubble:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,82,204,0.6); }
+    .cw-unread-badge {
+        position: absolute; top: -3px; right: -3px;
+        background: #ef4444; color: #fff;
+        border-radius: 50%; width: 18px; height: 18px;
+        font-size: 0.65rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        border: 2px solid #0a0e27;
+    }
+
+    .cw-panel {
+        position: absolute; bottom: 64px; right: 0;
+        width: 340px; max-height: 480px;
+        background: var(--dark-bg,#0b1220); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px; overflow: hidden;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        display: flex; flex-direction: column;
+    }
+    .cw-panel-header {
+        padding: 0.85rem 1rem; background: rgba(0,82,204,0.12);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .cw-panel-title { font-size: 0.95rem; font-weight: 700; }
+    .cw-panel-actions { display: flex; gap: 0.5rem; }
+    .cw-btn-icon { background: transparent; border: none; color: var(--dark-text-muted,#a8b2c1); cursor: pointer; padding: 0.2rem; font-size: 0.9rem; }
+    .cw-btn-icon:hover { color: inherit; }
+
+    .cw-conv-list { flex: 1; overflow-y: auto; }
+    .cw-conv-item { display: flex; gap: 0.65rem; padding: 0.7rem 1rem; cursor: pointer; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; }
+    .cw-conv-item:hover { background: rgba(255,255,255,0.04); }
+    .cw-conv-item.active { background: rgba(0,82,204,0.1); }
+    .cw-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,#0052CC,#00DD55); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #fff; }
+    .cw-conv-meta { flex: 1; min-width: 0; }
+    .cw-conv-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cw-conv-last { font-size: 0.72rem; color: var(--dark-text-muted,#a8b2c1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
+    .cw-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #0052CC; flex-shrink: 0; }
+
+    .cw-chat-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .cw-chat-header { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.02); }
+    .cw-chat-header-back { background: transparent; border: none; color: var(--dark-text-muted,#a8b2c1); cursor: pointer; font-size: 1rem; }
+    .cw-chat-title { font-size: 0.88rem; font-weight: 700; }
+
+    .cw-msg-area { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .cw-msg-row { display: flex; align-items: flex-end; gap: 0.4rem; }
+    .cw-msg-row.own { flex-direction: row-reverse; }
+    .cw-msg-sender-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg,#0052CC,#00DD55); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .cw-msg { max-width: 78%; padding: 0.45rem 0.7rem; border-radius: 14px; font-size: 0.82rem; line-height: 1.4; word-break: break-word; }
+    .cw-msg.other { background: rgba(255,255,255,0.08); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .cw-msg.own { background: #0052CC; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+
+    .cw-composer { padding: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.5rem; }
+    .cw-input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 0.45rem 0.85rem; color: inherit; font-size: 0.82rem; outline: none; font-family: inherit; resize: none; }
+    .cw-input:focus { border-color: #0052CC; }
+    .cw-send { background: #0052CC; border: none; color: #fff; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .cw-send:hover { background: #0040A0; }
+    .cw-send:disabled { background: rgba(0,82,204,0.3); cursor: default; }
+
+    .cw-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--dark-text-muted,#a8b2c1); font-size: 0.82rem; padding: 1rem; }
+
+    @@media (max-width: 400px) {
+        .cw-panel { width: 300px; max-height: 400px; }
+    }
+</style>
+
+<div id="chat-widget-root"></div>
+
+<script>
+// Floating Chat Widget – React (UMD from _Layout CDN scripts)
+(function() {
+    const CURRENT_USER_ID = @Html.Raw(int.TryParse(currentUserId, out var _cwUid) ? _cwUid.ToString() : "null");
+
+    function getToken() {
+        const m = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ApiAccessToken='));
+        return m ? decodeURIComponent(m.split('=')[1]) : (localStorage.getItem('token')||'');
+    }
+    function apiFetch(url, opts={}) {
+        return fetch(url, { ...opts, headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken(), ...(opts.headers||{}) }});
+    }
+    function initials(name) {
+        if (!name) return '?';
+        const p = name.trim().split(/\s+/);
+        return p.length===1 ? p[0][0].toUpperCase() : (p[0][0]+p[p.length-1][0]).toUpperCase();
+    }
+
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    function ChatWidget() {
+        const [open, setOpen] = useState(false);
+        const [convs, setConvs] = useState([]);
+        const [activeChatId, setActiveChatId] = useState(null);
+        const [activeChat, setActiveChat] = useState(null);
+        const [messages, setMessages] = useState([]);
+        const [input, setInput] = useState('');
+        const [unreadTotal, setUnreadTotal] = useState(0);
+        const connRef = useRef(null);
+        const msgEndRef = useRef(null);
+        const activeChatRef = useRef(null);
+
+        const loadConvs = useCallback(async () => {
+            try {
+                const r = await apiFetch('/api/chat/conversations');
+                if (r.ok) {
+                    const data = await r.json();
+                    setConvs(data);
+                    setUnreadTotal(data.reduce((s,c)=>s+(c.unreadCount||0),0));
+                }
+            } catch(e) {}
+        }, []);
+
+        const loadMsgs = useCallback(async (chatId) => {
+            if (!chatId) return;
+            try {
+                const r = await apiFetch(`/api/chat/${chatId}/messages?page=1&pageSize=50`);
+                if (r.ok) { const d = await r.json(); setMessages([...d].reverse()); }
+            } catch(e) {}
+        }, []);
+
+        // SignalR
+        useEffect(() => {
+            if (typeof signalR === 'undefined') return;
+            const conn = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/chat', { accessTokenFactory: getToken })
+                .withAutomaticReconnect().build();
+            conn.on('ReceiveMessage', msg => {
+                if (msg.chatId === activeChatRef.current)
+                    setMessages(prev=>[...prev,msg]);
+                loadConvs();
+            });
+            conn.start().then(()=>{ connRef.current=conn; }).catch(()=>{});
+            return ()=>conn.stop();
+        }, [loadConvs]);
+
+        useEffect(()=>{ activeChatRef.current=activeChatId; },[activeChatId]);
+        useEffect(()=>{ loadConvs(); },[loadConvs]);
+        useEffect(()=>{ msgEndRef.current?.scrollIntoView({behavior:'smooth'}); },[messages]);
+
+        function openChat(chatId, chat) {
+            setActiveChatId(chatId);
+            setActiveChat(chat);
+            setMessages([]);
+            loadMsgs(chatId);
+            const c = connRef.current;
+            if (c?.state==='Connected') c.invoke('JoinChat',chatId).catch(()=>{});
+            // Mark all unread messages in this chat as read
+            apiFetch(`/api/chat/${chatId}/messages/read-all`, {method:'PUT'})
+                .then(()=>loadConvs())
+                .catch(()=>{});
+        }
+
+        async function sendMsg(e) {
+            e.preventDefault();
+            const text = input.trim();
+            if (!text||!activeChatId) return;
+            const c = connRef.current;
+            if (c?.state==='Connected') {
+                try { await c.invoke('SendMessage',activeChatId,text); setInput(''); return; } catch(err){}
+            }
+            try {
+                await apiFetch(`/api/chat/${activeChatId}/messages`,{method:'POST',body:JSON.stringify({messageText:text})});
+                setInput(''); loadMsgs(activeChatId);
+            } catch(err){}
+        }
+
+        const panel = open && React.createElement('div', { className:'cw-panel' },
+            // Header
+            React.createElement('div', { className:'cw-panel-header' },
+                React.createElement('span', { className:'cw-panel-title' }, activeChatId ? '💬 '+((activeChat?.chatName)||'Chat') : '💬 Mensagens'),
+                React.createElement('div', { className:'cw-panel-actions' },
+                    activeChatId && React.createElement('button', { className:'cw-btn-icon', onClick:()=>{setActiveChatId(null);setActiveChat(null);} }, '←'),
+                    React.createElement('a', { href:'/Chats/Messages', className:'cw-btn-icon', title:'Abrir em ecrã completo', style:{textDecoration:'none'} }, '⤡'),
+                    React.createElement('button', { className:'cw-btn-icon', onClick:()=>setOpen(false) }, '✕')
+                )
+            ),
+
+            // Body
+            activeChatId
+                ? React.createElement('div', { className:'cw-chat-pane' },
+                    React.createElement('div', { className:'cw-msg-area' },
+                        messages.map((msg,i) => {
+                            const isOwn = msg.senderUserId === CURRENT_USER_ID;
+                            const senderName = msg.senderName || '';
+                            const senderInitials = initials(senderName);
+                            return React.createElement('div', { key:i, className:'cw-msg-row '+(isOwn?'own':'') },
+                                !isOwn && React.createElement('div', {
+                                    className:'cw-msg-sender-avatar',
+                                    title: senderName
+                                }, senderInitials),
+                                React.createElement('div', { className:'cw-msg '+(isOwn?'own':'other') }, msg.messageText)
+                            );
+                        }),
+                        React.createElement('div',{ref:msgEndRef})
+                    ),
+                    React.createElement('div', { className:'cw-composer' },
+                        React.createElement('form', { onSubmit:sendMsg, style:{display:'flex',gap:'0.5rem',flex:1} },
+                            React.createElement('textarea', { className:'cw-input', rows:1, placeholder:'Mensagem...', value:input, onChange:e=>setInput(e.target.value), onKeyDown:e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg(e);}}, style:{height:36} }),
+                            React.createElement('button', { type:'submit', className:'cw-send', disabled:!input.trim() },
+                                React.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'currentColor'}, React.createElement('path',{d:'M2.01 21L23 12 2.01 3 2 10l15 2-15 2z'}))
+                            )
+                        )
+                    )
+                  )
+                : convs.length === 0
+                    ? React.createElement('div', { className:'cw-empty' },
+                        React.createElement('span',null,'💬'),
+                        React.createElement('span',null,'Sem conversas ainda'),
+                        React.createElement('a',{href:'/Chats/Create',style:{color:'#4f8ef7',textDecoration:'none',fontSize:'0.8rem'}},'Criar conversa →')
+                      )
+                    : React.createElement('div', { className:'cw-conv-list' },
+                        convs.map(conv =>
+                            React.createElement('div', { key:conv.chatId, className:'cw-conv-item', onClick:()=>openChat(conv.chatId,conv) },
+                                React.createElement('div', { className:'cw-avatar' }, initials(conv.chatName||'?')),
+                                React.createElement('div', { className:'cw-conv-meta' },
+                                    React.createElement('div', { className:'cw-conv-name' }, conv.chatName||'Chat'),
+                                    React.createElement('div', { className:'cw-conv-last' }, conv.lastMessage?.messageText||'Sem mensagens')
+                                ),
+                                (conv.unreadCount > 0) && React.createElement('div', { className:'cw-unread-dot' })
+                            )
+                        )
+                      )
+        );
+
+        return React.createElement(React.Fragment, null,
+            panel,
+            React.createElement('button', { className:'cw-bubble', onClick:()=>{ setOpen(o=>!o); if(!open) loadConvs(); }, title:'Mensagens' },
+                '💬',
+                unreadTotal > 0 && React.createElement('span', { className:'cw-unread-badge' }, unreadTotal > 9 ? '9+' : unreadTotal)
+            )
+        );
+    }
+
+    // Only mount if React is available
+    if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+        const root = ReactDOM.createRoot(document.getElementById('chat-widget-root'));
+        root.render(React.createElement(ChatWidget));
+    }
+})();
+</script>
+}

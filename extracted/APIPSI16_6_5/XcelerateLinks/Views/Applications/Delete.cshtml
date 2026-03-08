@@ -1,0 +1,21 @@
+@model JobApplication
+@{
+    ViewData["Title"] = "Eliminar candidatura";
+}
+
+<h2 class="mb-3">Eliminar candidatura</h2>
+
+<p>Tem a certeza que deseja eliminar esta candidatura?</p>
+
+<dl class="row">
+    <dt class="col-sm-3">Nome</dt>
+    <dd class="col-sm-9">@Model.Name</dd>
+    <dt class="col-sm-3">Oportunidade</dt>
+    <dd class="col-sm-9">@((Model.Opportunity?.Title ?? Model.OpportunityId.ToString()) ?? "-")</dd>
+</dl>
+
+<form asp-action="DeleteConfirmed" asp-route-id="@Model.JobApplicationId" method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Details" asp-route-id="@Model.JobApplicationId" class="btn btn-outline-secondary">Cancelar</a>
+</form>

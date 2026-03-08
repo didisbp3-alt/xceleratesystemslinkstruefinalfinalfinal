@@ -1,0 +1,279 @@
+@model APIPSI16.Models.Company
+@using System.Security.Claims
+@{
+    ViewData["Title"] = Model.Name ?? "Empresa";
+    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+    var isAdmin = role == "0";
+    var isEmployer = role == "2";
+    var canEdit = isAdmin || isEmployer;
+    var initial = !string.IsNullOrEmpty(Model.Name) ? Model.Name[0].ToString().ToUpper() : "?";
+}
+
+<style>
+    .co-page { max-width: 900px; margin: 0 auto; padding-bottom: 3rem; }
+
+    .co-banner {
+        height: 180px; border-radius: 16px; overflow: hidden;
+        background: linear-gradient(135deg, rgba(0,82,204,0.18), rgba(0,221,85,0.08));
+        margin-bottom: 0; position: relative;
+    }
+
+    .co-header {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0 0 16px 16px; padding: 0 2rem 1.5rem; margin-bottom: 1.25rem;
+        border-top: none;
+    }
+    .co-logo-wrap { margin-top: -36px; margin-bottom: 0.75rem; }
+    .co-logo {
+        width: 72px; height: 72px; border-radius: 14px; border: 4px solid #0b1220; object-fit: cover;
+    }
+    .co-logo-placeholder {
+        width: 72px; height: 72px; border-radius: 14px; border: 4px solid #0b1220;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; color: #fff; font-weight: 800;
+    }
+    .co-name { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .co-meta { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.88rem; color: var(--dark-text-muted,#a8b2c1); margin: 0.5rem 0 1rem; }
+    .co-meta span { display: flex; align-items: center; gap: 0.3rem; }
+
+    .co-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-co-primary { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.5rem 1.5rem; font-size: 0.9rem; font-weight: 600; text-decoration: none; display: inline-block; }
+    .btn-co-primary:hover { background: #0040A0; color: #fff; }
+    .btn-co-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: inherit; border-radius: 30px; padding: 0.5rem 1.5rem; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+    .btn-co-outline:hover { background: rgba(255,255,255,0.06); color: inherit; }
+    .btn-co-danger { background: transparent; border: 1px solid rgba(239,68,68,0.35); color: #ef4444; border-radius: 30px; padding: 0.5rem 1.5rem; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+    .btn-co-danger:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
+
+    .co-section { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.5rem; margin-bottom: 1rem; }
+    .co-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+
+    .co-jobs-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .co-job-item {
+        display: flex; gap: 0.75rem; align-items: flex-start;
+        padding: 0.85rem 1rem; border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 10px; background: rgba(255,255,255,0.02);
+        transition: border-color 0.15s;
+    }
+    .co-job-item:hover { border-color: rgba(0,82,204,0.35); }
+    .co-job-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .co-job-title { font-size: 0.95rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .co-job-title:hover { color: #4f8ef7; }
+    .co-job-meta { font-size: 0.78rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.15rem; }
+    .btn-apply-sm { background: #0052CC; color: #fff; border: none; border-radius: 20px; padding: 0.3rem 0.85rem; font-size: 0.78rem; text-decoration: none; flex-shrink: 0; }
+    .btn-apply-sm:hover { background: #0040A0; color: #fff; }
+</style>
+
+<div class="container py-4">
+    <div class="co-page">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-4">← Empresas</a>
+
+        <div class="co-banner"></div>
+
+        <div class="co-header">
+            <div class="co-logo-wrap">
+                @if (!string.IsNullOrEmpty(Model.CompanyLogoUrl))
+                {
+                    <img src="@Model.CompanyLogoUrl" class="co-logo" alt="@Model.Name" />
+                }
+                else
+                {
+                    <span class="co-logo-placeholder">@initial</span>
+                }
+            </div>
+
+            <div class="co-name">@Model.Name</div>
+
+            <div class="co-meta">
+                @if (!string.IsNullOrEmpty(Model.Industry))
+                {
+                    <span>🏭 @Model.Industry</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Location))
+                {
+                    <span>📍 @Model.Location</span>
+                }
+                @if (Model.CreatedAt.HasValue)
+                {
+                    <span>📅 Desde @Model.CreatedAt.Value.Year</span>
+                }
+            </div>
+
+            <div class="co-actions">
+                <a asp-controller="Opportunities" asp-action="Index" asp-route-q="@Model.Name" class="btn-co-primary">Ver vagas</a>
+                @if (canEdit)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.CompanyId" class="btn-co-outline">Editar</a>
+                }
+                @if (isAdmin)
+                {
+                    <a asp-action="Delete" asp-route-id="@Model.CompanyId" class="btn-co-danger">Eliminar</a>
+                }
+            </div>
+        </div>
+
+        @if (ViewBag.CompanyOpportunities is IEnumerable<APIPSI16.Models.Opportunity> { } jobs && jobs.Any())
+        {
+            <div class="co-section">
+                <h3>💼 Oportunidades de emprego</h3>
+                <div class="co-jobs-list">
+                    @foreach (var job in jobs)
+                    {
+                        <div class="co-job-item">
+                            <span class="co-job-icon">📋</span>
+                            <div style="flex:1; min-width:0;">
+                                <a asp-controller="Opportunities" asp-action="Details" asp-route-id="@job.Id" class="co-job-title">@(job.Title ?? "Vaga")</a>
+                                @if (!string.IsNullOrEmpty(job.Location))
+                                {
+                                    <div class="co-job-meta">📍 @job.Location</div>
+                                }
+                            </div>
+                            <a asp-controller="Applications" asp-action="Create" asp-route-opportunityId="@job.Id" class="btn-apply-sm">Candidatar</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="co-section" id="company-ratings-section">
+            <h3>⭐ Avaliações</h3>
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+                <span id="co-avg-rating-display"></span>
+            </div>
+            <div id="co-ratings-list"><p style="color:#a8b2c1; font-size:0.88rem;">A carregar avaliações...</p></div>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <hr style="border-color:rgba(255,255,255,0.08); margin: 1rem 0;" />
+                <h5 style="font-size:0.9rem; margin-bottom:0.75rem;">Deixa a tua avaliação</h5>
+                <div id="co-rating-form-wrap">
+                    <div class="star-selector mb-2" id="co-star-selector">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span class="star-opt" data-val="@i" style="font-size:1.5rem; cursor:pointer; color:#a8b2c1;">★</span>
+                        }
+                    </div>
+                    <textarea id="co-review-text" class="form-control mb-2" placeholder="Escreve uma avaliação (opcional)..." style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:inherit;border-radius:8px;padding:0.5rem 0.75rem;width:100%;resize:vertical;min-height:70px;margin-top:0.5rem;"></textarea>
+                    <button id="co-submit-rating-btn" style="background:#0052CC;color:#fff;border:none;border-radius:20px;padding:0.4rem 1.2rem;cursor:pointer;font-size:0.88rem;margin-top:0.5rem;" onclick="coSubmitRating('@Model.CompanyId', 'Company')">Enviar avaliação</button>
+                    <span id="co-rating-msg" style="font-size:0.82rem; margin-left:0.75rem;"></span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function() {
+    var entityId = @Model.CompanyId;
+    var entityType = 'Company';
+    var selectedScore = 0;
+    var existingRatingId = null;
+
+    function getToken() {
+        var m = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ApiAccessToken=');});
+        return m ? decodeURIComponent(m.split('=')[1]) : (localStorage.getItem('token') || '');
+    }
+
+    function renderStars(score, max) {
+        var s = '';
+        for (var i = 1; i <= max; i++) s += (i <= score ? '★' : '☆');
+        return s;
+    }
+
+    function setStarUI(score) {
+        selectedScore = score;
+        document.querySelectorAll('#co-star-selector .star-opt').forEach(function(s) {
+            s.style.color = parseInt(s.dataset.val) <= score ? '#f59e0b' : '#a8b2c1';
+        });
+    }
+
+    function loadRatings() {
+        var list = document.getElementById('co-ratings-list');
+        fetch('/api/ratings/entity/' + entityType + '/' + entityId, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        }).then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).then(function(ratings) {
+            var avgEl = document.getElementById('co-avg-rating-display');
+            if (!ratings || ratings.length === 0) {
+                if (list) list.innerHTML = '<p style="color:#a8b2c1;font-size:0.88rem;">Ainda sem avaliações.</p>';
+                if (avgEl) avgEl.textContent = '';
+                return;
+            }
+            var avg = ratings.reduce(function(s,r){return s+r.score;},0)/ratings.length;
+            if (avgEl) avgEl.innerHTML = '<span style="color:#f59e0b;font-size:1.1rem;">' + renderStars(Math.round(avg),5) + '</span> <small style="color:#a8b2c1;">' + avg.toFixed(1) + ' / 5 (' + ratings.length + ')</small>';
+            if (list) {
+                list.innerHTML = ratings.map(function(r) {
+                    var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-PT') : '';
+                    var safeName = (r.ratedByUserName || 'Utilizador').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    var reviewHtml = r.review ? '<p style="font-size:0.85rem;color:#a8b2c1;margin:0;">' + r.review.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>' : '';
+                    return '<div style="padding:0.75rem 0; border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                        '<strong style="font-size:0.88rem;">' + safeName + '</strong>' +
+                        '<span style="color:#f59e0b;">' + renderStars(r.score,5) + '</span></div>' +
+                        reviewHtml +
+                        '<small style="color:#6b7280;">' + date + '</small></div>';
+                }).join('');
+            }
+        }).catch(function() {
+            if (list) list.innerHTML = '<p style="color:#ef4444;font-size:0.88rem;">Não foi possível carregar as avaliações.</p>';
+        });
+    }
+
+    function loadMyRating() {
+        fetch('/api/ratings/my/' + entityType + '/' + entityId, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        }).then(function(r) {
+            if (r.status === 404) return null;
+            if (!r.ok) return null;
+            return r.json();
+        }).then(function(myRating) {
+            if (!myRating) return;
+            existingRatingId = myRating.ratingId;
+            setStarUI(myRating.score);
+            var reviewEl = document.getElementById('co-review-text');
+            if (reviewEl) reviewEl.value = myRating.review || '';
+            var btn = document.getElementById('co-submit-rating-btn');
+            if (btn) btn.textContent = 'Atualizar avaliação';
+            var msg = document.getElementById('co-rating-msg');
+            if (msg) msg.textContent = '(já avaliaste – podes editar)';
+        }).catch(function() {});
+    }
+
+    var stars = document.querySelectorAll('#co-star-selector .star-opt');
+    stars.forEach(function(star) {
+        star.addEventListener('click', function() {
+            setStarUI(parseInt(this.dataset.val));
+        });
+        star.addEventListener('mouseover', function() {
+            var v = parseInt(this.dataset.val);
+            stars.forEach(function(s) { s.style.color = parseInt(s.dataset.val) <= v ? '#f59e0b' : '#a8b2c1'; });
+        });
+        star.addEventListener('mouseout', function() {
+            stars.forEach(function(s) { s.style.color = parseInt(s.dataset.val) <= selectedScore ? '#f59e0b' : '#a8b2c1'; });
+        });
+    });
+
+    window.coSubmitRating = function(id, type) {
+        if (selectedScore < 1) { document.getElementById('co-rating-msg').textContent = 'Seleciona uma classificação.'; return; }
+        var review = document.getElementById('co-review-text').value.trim();
+        fetch('/api/ratings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: JSON.stringify({ ratedEntityId: parseInt(id), entityType: type, score: selectedScore, review: review })
+        }).then(function(r) {
+            if (r.ok || r.status === 201) {
+                document.getElementById('co-rating-form-wrap').innerHTML = '<p style="color:#00DD55;">✓ Avaliação enviada!</p>';
+                loadRatings();
+            } else {
+                return r.text().then(function(t) { document.getElementById('co-rating-msg').textContent = t || 'Erro ao enviar avaliação.'; });
+            }
+        }).catch(function(){ document.getElementById('co-rating-msg').textContent = 'Erro de ligação.'; });
+    };
+
+    loadRatings();
+    loadMyRating();
+})();
+</script>
+}

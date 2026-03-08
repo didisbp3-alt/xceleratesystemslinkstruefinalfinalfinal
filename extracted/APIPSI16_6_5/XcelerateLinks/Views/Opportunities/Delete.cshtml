@@ -1,0 +1,22 @@
+@model Opportunity
+@{
+    ViewData["Title"] = "Eliminar oportunidade";
+}
+
+<h2 class="mb-3">Eliminar oportunidade</h2>
+
+<p>Tem a certeza que deseja eliminar esta oportunidade?</p>
+
+<dl class="row">
+    <dt class="col-sm-3">Título</dt>
+    <dd class="col-sm-9">@Model.Title</dd>
+    <dt class="col-sm-3">Empresa</dt>
+    <dd class="col-sm-9">@((Model.Company?.Name ?? Model.CompanyId?.ToString()) ?? "-")</dd>
+</dl>
+
+<form asp-action="DeleteConfirmed" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancelar</a>
+</form>

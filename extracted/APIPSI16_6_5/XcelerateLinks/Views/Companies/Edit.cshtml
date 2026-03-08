@@ -1,0 +1,284 @@
+@model Company
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Editar empresa";
+    var initial = !string.IsNullOrEmpty(Model?.Name) ? Model.Name[0].ToString().ToUpper() : "?";
+}
+
+<style>
+    .co-edit-container { max-width: 700px; margin: 0 auto; padding: 2rem 0; }
+    .co-edit-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 2rem; margin-bottom: 1.25rem; }
+    .co-edit-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .field-styled { margin-bottom: 1rem; }
+    .field-styled label { font-size: 0.85rem; font-weight: 600; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.4rem; display: block; }
+    .field-styled input, .field-styled textarea {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: inherit;
+        border-radius: 10px; padding: 0.55rem 0.85rem; width: 100%; font-size: 0.9rem;
+    }
+    .field-styled input:focus, .field-styled textarea:focus { border-color: #0052CC; outline: none; }
+    .btn-save { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.65rem 2rem; font-weight: 600; }
+    .btn-save:hover { background: #0040A0; }
+    .logo-preview { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(255,255,255,0.15); }
+    .logo-placeholder { width: 72px; height: 72px; border-radius: 12px; background: linear-gradient(135deg,#0052CC,#00DD55); display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; color: #fff; }
+    .upload-row { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    .file-input-styled { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 10px; padding: 0.6rem 1rem; font-size: 0.88rem; color: inherit; cursor: pointer; }
+</style>
+
+<div class="container py-4">
+    <div class="co-edit-container">
+        <a asp-action="Details" asp-route-id="@Model.CompanyId" class="btn btn-sm btn-outline-secondary mb-4">← Voltar</a>
+
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CompanyId" />
+            <input type="hidden" asp-for="CompanyLogoUrl" />
+            <input type="hidden" asp-for="CreatedAt" />
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <div class="co-edit-card">
+                <h3>🏢 Informação da empresa</h3>
+                <div class="field-styled">
+                    <label asp-for="Name">Nome da empresa *</label>
+                    <input asp-for="Name" placeholder="Nome da empresa..." />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="field-styled" id="industry-field">
+                    <label asp-for="Industry">Setor / Indústria</label>
+                    <div style="position:relative;">
+                        <input type="text" id="industrySearch" placeholder="Pesquisar setor..." autocomplete="off"
+                            style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:inherit;border-radius:10px;padding:0.55rem 0.85rem;width:100%;font-size:0.9rem;" />
+                        <div id="industryDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#141829;border:1px solid rgba(255,255,255,0.15);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;">
+                        </div>
+                    </div>
+                    <div id="industrySelected" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;"></div>
+                    <input type="hidden" asp-for="Industry" id="industryHidden" />
+                    <small style="color:#a8b2c1;font-size:0.75rem;">Podes selecionar vários setores.</small>
+                </div>
+                <div class="field-styled">
+                    <label asp-for="Location">Localização</label>
+                    <input asp-for="Location" placeholder="Ex: Lisboa, Portugal..." />
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 align-items-center">
+                <button type="submit" class="btn-save">Guardar alterações</button>
+                <a asp-action="Details" asp-route-id="@Model.CompanyId" class="btn btn-outline-secondary">Cancelar</a>
+            </div>
+        </form>
+
+        <!-- Logo upload (separate form) -->
+        <div class="co-edit-card mt-3">
+            <h3>🖼️ Logótipo da empresa</h3>
+            @if (TempData["LogoError"] != null)
+            {
+                <div class="alert alert-danger mt-2" style="font-size:0.85rem;">@TempData["LogoError"]</div>
+            }
+            <div class="upload-row mb-3">
+                @if (!string.IsNullOrEmpty(Model?.CompanyLogoUrl))
+                {
+                    <img src="@Model.CompanyLogoUrl" class="logo-preview" alt="Logo" id="logoPreview" />
+                }
+                else
+                {
+                    <span class="logo-placeholder" id="logoPreview">@initial</span>
+                }
+                <div>
+                    <p style="font-size:0.82rem;color:#a8b2c1;margin:0 0 0.4rem;">Ficheiro JPG, PNG ou GIF. Máx. 5MB.</p>
+                    <form asp-action="UploadLogo" asp-route-id="@Model.CompanyId" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="file" name="logoFile" accept="image/*" class="file-input-styled" id="logoFileInput" />
+                        <button type="submit" class="btn-save mt-2" style="padding:0.4rem 1.2rem;font-size:0.85rem;">Carregar logótipo</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@{
+    var viewerRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+    var isAdmin = viewerRole == "0";
+    var isEmployer = viewerRole == "2";
+}
+
+@if (isAdmin || isEmployer)
+{
+<div class="container py-2">
+    <div class="co-edit-container">
+        <div class="co-edit-card">
+            <h3>👥 Empregadores da Empresa</h3>
+            <div id="employers-list"><p style="color:#a8b2c1;font-size:0.88rem;">A carregar...</p></div>
+        </div>
+
+        <div class="co-edit-card">
+            <h3>⏳ Pedidos para se Tornarem Empregadores</h3>
+            <div id="pending-requests-list"><p style="color:#a8b2c1;font-size:0.88rem;">A carregar...</p></div>
+        </div>
+    </div>
+</div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+<script>
+(function() {
+    var companyId = @Model.CompanyId;
+    function getToken() {
+        return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ApiAccessToken='))?.split('=')[1] || localStorage.getItem('token') || '';
+    }
+    var authHeaders = { 'Authorization': 'Bearer ' + getToken() };
+    var roleNames = { 1: 'Recruiter', 2: 'Gestor RH', 3: 'Admin Empresa' };
+
+    function loadEmployers() {
+        fetch('/api/users/company/' + companyId + '/employers', { headers: authHeaders })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(data => {
+            var el = document.getElementById('employers-list');
+            if (!data.length) { el.innerHTML = '<p style="color:#a8b2c1;font-size:0.88rem;">Nenhum empregador ativo.</p>'; return; }
+            el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.88rem;">' +
+                '<tr style="border-bottom:1px solid rgba(255,255,255,0.08);"><th style="text-align:left;padding:0.4rem;">Nome</th><th>Função</th><th>Ação</th></tr>' +
+                data.map(m => '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">' +
+                    '<td style="padding:0.4rem;">' + (m.name || '—') + '</td>' +
+                    '<td style="padding:0.4rem;text-align:center;">' + (roleNames[m.role] || m.role) + '</td>' +
+                    '<td style="padding:0.4rem;text-align:center;">' +
+                    '<button type="button" onclick="removeEmployer(' + m.companyMemberId + ')" style="background:none;border:1px solid #ef4444;color:#ef4444;border-radius:20px;padding:0.2rem 0.7rem;cursor:pointer;font-size:0.78rem;">Remover</button>' +
+                    '</td></tr>').join('') + '</table>';
+        }).catch(() => {
+            var el = document.getElementById('employers-list');
+            if (el) el.innerHTML = '';
+        });
+    }
+
+    function loadPendingRequests() {
+        fetch('/api/users/company/' + companyId + '/employer-requests', { headers: authHeaders })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(data => {
+            var el = document.getElementById('pending-requests-list');
+            if (!data.length) { el.innerHTML = '<p style="color:#a8b2c1;font-size:0.88rem;">Nenhum pedido pendente.</p>'; return; }
+            el.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.75rem;">' +
+                data.map(u => '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">' +
+                    '<div style="flex:1;min-width:120px;"><strong>' + (u.name || '—') + '</strong><div style="font-size:0.8rem;color:#a8b2c1;">' + (u.email || '') + '</div></div>' +
+                    (u.employerRequestDocumentUrl ? '<a href="' + u.employerRequestDocumentUrl + '" target="_blank" style="font-size:0.8rem;color:#4d90fe;">Ver documento</a>' : '') +
+                    (u.employerRequestNote ? '<div style="font-size:0.8rem;color:#a8b2c1;">"' + u.employerRequestNote + '"</div>' : '') +
+                    '<div style="display:flex;gap:0.5rem;">' +
+                    '<button type="button" onclick="approveRequest(' + u.userId + ')" style="background:#00DD55;color:#000;border:none;border-radius:20px;padding:0.25rem 0.9rem;cursor:pointer;font-size:0.82rem;font-weight:600;">Aprovar</button>' +
+                    '<button type="button" onclick="rejectRequest(' + u.userId + ')" style="background:none;border:1px solid #ef4444;color:#ef4444;border-radius:20px;padding:0.25rem 0.9rem;cursor:pointer;font-size:0.82rem;">Rejeitar</button>' +
+                    '</div></div>').join('') + '</div>';
+        }).catch(() => {
+            var el = document.getElementById('pending-requests-list');
+            if (el) el.innerHTML = '';
+        });
+    }
+
+    window.removeEmployer = function(memberId) {
+        if (!confirm('Remover este empregador da empresa?')) return;
+        fetch('/api/users/company/' + companyId + '/employers/' + memberId, {
+            method: 'DELETE',
+            headers: authHeaders
+        }).then(r => {
+            if (r.ok) loadEmployers();
+            else r.text().then(t => alert(t || 'Erro ao remover.'));
+        });
+    };
+
+    window.approveRequest = function(userId) {
+        fetch('/api/users/' + userId + '/approve-employer', { method: 'POST', headers: authHeaders })
+        .then(r => {
+            if (r.ok) { loadEmployers(); loadPendingRequests(); }
+            else r.text().then(t => alert(t || 'Erro ao aprovar.'));
+        });
+    };
+
+    window.rejectRequest = function(userId) {
+        if (!confirm('Rejeitar este pedido?')) return;
+        fetch('/api/users/' + userId + '/reject-employer', { method: 'POST', headers: authHeaders })
+        .then(r => {
+            if (r.ok) loadPendingRequests();
+            else r.text().then(t => alert(t || 'Erro ao rejeitar.'));
+        });
+    };
+
+    loadEmployers();
+    loadPendingRequests();
+})();
+</script>
+<script>
+(function() {
+    var INDUSTRIES = [
+        "Tecnologia","Software","Hardware","Inteligência Artificial","Cibersegurança",
+        "Saúde","Farmacêutica","Biotecnologia","Medicina","Cuidados de Saúde",
+        "Finanças","Banca","Seguros","Contabilidade","Investimento",
+        "Educação","Investigação","Ciência",
+        "Retalho","E-Commerce","Logística","Transportes","Automóvel",
+        "Construção","Imobiliário","Arquitetura","Engenharia",
+        "Media","Entretenimento","Marketing","Publicidade","Design",
+        "Telecomunicações","Energia","Ambiente","Alimentação","Turismo",
+        "Consultoria","Recursos Humanos","Jurídico","Governo","Sem fins lucrativos",
+        "Aeroespacial","Defesa","Manufatura","Química"
+    ].sort();
+
+    var selected = [];
+    var currentVal = (document.getElementById('industryHidden').value || '').trim();
+    if (currentVal) {
+        selected = currentVal.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+
+    function renderSelected() {
+        var div = document.getElementById('industrySelected');
+        div.innerHTML = '';
+        selected.forEach(function(s, idx) {
+            var span = document.createElement('span');
+            span.style.cssText = 'background:rgba(0,82,204,0.2);border:1px solid rgba(0,82,204,0.4);border-radius:20px;padding:0.2rem 0.6rem;font-size:0.78rem;display:inline-flex;align-items:center;gap:0.3rem;';
+            var nameNode = document.createTextNode(s + ' ');
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;padding:0;line-height:1;';
+            btn.textContent = '×';
+            btn.setAttribute('data-idx', idx);
+            btn.addEventListener('click', function() { removeIndustryByIdx(parseInt(this.getAttribute('data-idx'))); });
+            span.appendChild(nameNode);
+            span.appendChild(btn);
+            div.appendChild(span);
+        });
+        document.getElementById('industryHidden').value = selected.join(',');
+    }
+
+    function removeIndustryByIdx(idx) {
+        selected.splice(idx, 1);
+        renderSelected();
+    }
+
+    function showDropdown(q) {
+        var dd = document.getElementById('industryDropdown');
+        var filtered = INDUSTRIES.filter(function(i){ return i.toLowerCase().includes(q.toLowerCase()) && !selected.includes(i); });
+        if (!filtered.length) { dd.style.display = 'none'; return; }
+        dd.style.display = 'block';
+        dd.innerHTML = '';
+        filtered.forEach(function(name) {
+            var div = document.createElement('div');
+            div.textContent = name;
+            div.style.cssText = 'padding:0.5rem 0.75rem;cursor:pointer;font-size:0.88rem;';
+            div.addEventListener('mouseover', function(){ this.style.background = 'rgba(0,82,204,0.2)'; });
+            div.addEventListener('mouseout', function(){ this.style.background = ''; });
+            div.addEventListener('click', function(){ addIndustry(name); });
+            dd.appendChild(div);
+        });
+    }
+
+    window.addIndustry = function(name) {
+        if (!selected.includes(name)) { selected.push(name); renderSelected(); }
+        document.getElementById('industrySearch').value = '';
+        document.getElementById('industryDropdown').style.display = 'none';
+    };
+
+    document.getElementById('industrySearch').addEventListener('input', function() { showDropdown(this.value); });
+    document.getElementById('industrySearch').addEventListener('focus', function() { showDropdown(this.value); });
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('industry-field').contains(e.target))
+            document.getElementById('industryDropdown').style.display = 'none';
+    });
+
+    renderSelected();
+})();
+</script>
+}

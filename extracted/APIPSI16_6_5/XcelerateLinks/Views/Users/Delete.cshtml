@@ -1,0 +1,26 @@
+@model APIPSI16.Models.DTOs.UserDTO
+@{
+    ViewData["Title"] = "Apagar Utilizador";
+}
+
+<h2>Apagar Utilizador</h2>
+
+<div class="alert alert-warning">
+    Tens a certeza que queres apagar este utilizador?
+</div>
+
+<dl class="row">
+    <dt class="col-sm-2">Nome</dt>
+    <dd class="col-sm-10">@Model.Name</dd>
+
+    <dt class="col-sm-2">Email</dt>
+    <dd class="col-sm-10">@Model.Email</dd>
+</dl>
+
+<form asp-action="Delete" method="post" class="d-inline">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.UserId" />
+    <button type="submit" class="btn btn-danger">Apagar</button>
+</form>
+
+<a asp-action="Index" class="btn btn-outline-secondary ms-2">Cancelar</a>

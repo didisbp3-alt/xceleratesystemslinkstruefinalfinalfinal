@@ -1,0 +1,140 @@
+@model IEnumerable<XcelerateLinks.Mvc.Controllers.ConnectionsController.ConnectionWithUserDTO>
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "As Minhas Ligações";
+    var currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var cid) ? cid : 0;
+    var pending = ViewBag.Pending as IEnumerable<XcelerateLinks.Mvc.Controllers.ConnectionsController.ConnectionWithUserDTO>
+        ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.ConnectionsController.ConnectionWithUserDTO>();
+}
+
+<style>
+    .conn-hero { background: linear-gradient(135deg,rgba(0,82,204,0.12),rgba(0,221,85,0.06)); border-radius:16px; padding:2rem; margin-bottom:2rem; animation:fadeUp 0.35s ease both; }
+    .conn-hero h1 { font-size:1.8rem; font-weight:800; margin-bottom:0.4rem; }
+    .conn-hero p { color:var(--dark-text-muted,#a8b2c1); margin:0; }
+    .conn-tabs { display:flex; gap:0.25rem; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:0; margin-bottom:1.5rem; }
+    .conn-tab { padding:0.5rem 1.25rem; font-size:0.88rem; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--dark-text-muted,#a8b2c1); border-bottom:2px solid transparent; margin-bottom:-1px; transition:color 0.15s,border-color 0.15s; }
+    .conn-tab.active,.conn-tab:hover { color:#4f8ef7; border-bottom-color:#0052CC; }
+    .conn-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+    .conn-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; transition:transform 0.2s,border-color 0.2s; animation:fadeUp 0.4s ease both; }
+    .conn-card:hover { transform:translateY(-3px); border-color:rgba(0,82,204,0.35); }
+    .conn-card-top { display:flex; gap:0.85rem; align-items:center; }
+    .conn-avatar { width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#0052CC,#00DD55); display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:800; color:#fff; flex-shrink:0; overflow:hidden; }
+    .conn-avatar img { width:100%; height:100%; object-fit:cover; }
+    .conn-name { font-size:0.95rem; font-weight:700; color:inherit; text-decoration:none; }
+    .conn-name:hover { color:#4f8ef7; }
+    .conn-bio { font-size:0.8rem; color:var(--dark-text-muted,#a8b2c1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .conn-actions { display:flex; gap:0.5rem; }
+    .btn-conn { border-radius:30px; padding:0.3rem 0.9rem; font-size:0.8rem; font-weight:600; border:1px solid rgba(255,255,255,0.15); background:transparent; color:inherit; cursor:pointer; transition:background 0.15s; text-decoration:none; display:inline-flex; align-items:center; }
+    .btn-conn:hover { background:rgba(255,255,255,0.06); color:inherit; }
+    .btn-conn-accent { border-color:#0052CC; color:#4f8ef7; }
+    .btn-conn-accent:hover { background:rgba(0,82,204,0.12); }
+    .btn-conn-danger { border-color:rgba(239,68,68,0.4); color:#f87171; }
+    .btn-conn-danger:hover { background:rgba(239,68,68,0.08); }
+    .pending-badge { background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.35); color:#fbbf24; border-radius:30px; padding:0.15rem 0.6rem; font-size:0.72rem; font-weight:700; }
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--dark-text-muted,#a8b2c1); }
+    .empty-state svg { opacity:0.3; margin-bottom:1rem; }
+</style>
+
+<div class="container py-4">
+    <div class="conn-hero">
+        <h1>🤝 As Minhas Ligações</h1>
+        <p>Gere a tua rede profissional de contactos.</p>
+    </div>
+
+    @if (TempData["ConnectionMsg"] != null)
+    {
+        <div class="alert alert-info mb-3">@TempData["ConnectionMsg"]</div>
+    }
+
+    <!-- Pending requests -->
+    @if (pending.Any())
+    {
+        <div class="mb-4">
+            <h5 class="mb-3">📩 Pedidos pendentes <span class="pending-badge">@pending.Count()</span></h5>
+            <div class="conn-grid">
+                @foreach (var req in pending)
+                {
+                    var requester = req.RequesterUser;
+                    var initials = string.IsNullOrWhiteSpace(requester?.Name) ? "?" :
+                        (requester.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                            ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper())
+                            : "?");
+                    <div class="conn-card">
+                        <div class="conn-card-top">
+                            <div class="conn-avatar">
+                                @if (!string.IsNullOrEmpty(requester?.ProfilePictureUrl))
+                                { <img src="@requester.ProfilePictureUrl" alt="@requester.Name" /> }
+                                else
+                                { @initials }
+                            </div>
+                            <div>
+                                <a asp-controller="Users" asp-action="Details" asp-route-id="@req.RequesterUserId" class="conn-name">@(requester?.Name ?? "Utilizador")</a>
+                                <div class="conn-bio">@(requester?.ProfileBio ?? "Sem descrição.")</div>
+                            </div>
+                        </div>
+                        <div class="conn-actions">
+                            <form method="post" asp-action="Accept" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="connectionId" value="@req.ConnectionId" />
+                                <button type="submit" class="btn-conn btn-conn-accent">✓ Aceitar</button>
+                            </form>
+                            <form method="post" asp-action="Remove" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="connectionId" value="@req.ConnectionId" />
+                                <button type="submit" class="btn-conn btn-conn-danger">✗ Recusar</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <hr style="border-color:rgba(255,255,255,0.08);margin:1.5rem 0;" />
+    }
+
+    <!-- Accepted connections -->
+    <h5 class="mb-3">👥 Ligações (@Model.Count())</h5>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg width="56" height="56" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <p>Ainda não tens ligações.<br /><a asp-controller="Users" asp-action="Network" class="btn btn-sm btn-primary mt-2">Explorar rede</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="conn-grid">
+            @foreach (var conn in Model)
+            {
+                var otherUserId = conn.RequesterUserId == currentUserId ? conn.AddresseeUserId : conn.RequesterUserId;
+                var otherUser = conn.OtherUser;
+                var initials = string.IsNullOrWhiteSpace(otherUser?.Name) ? "?" :
+                    (otherUser.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                        ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper())
+                        : "?");
+                <div class="conn-card">
+                    <div class="conn-card-top">
+                        <div class="conn-avatar">
+                            @if (!string.IsNullOrEmpty(otherUser?.ProfilePictureUrl))
+                            { <img src="@otherUser.ProfilePictureUrl" alt="@otherUser.Name" /> }
+                            else
+                            { @initials }
+                        </div>
+                        <div>
+                            <a asp-controller="Users" asp-action="Details" asp-route-id="@otherUserId" class="conn-name">@(otherUser?.Name ?? "Utilizador")</a>
+                            <div class="conn-bio">@(otherUser?.ProfileBio ?? "Sem descrição.")</div>
+                        </div>
+                    </div>
+                    <div class="conn-actions">
+                        <a asp-controller="Chats" asp-action="Create" asp-route-withUserId="@otherUserId" class="btn-conn btn-conn-accent">💬 Mensagem</a>
+                        <form method="post" asp-action="Remove" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="connectionId" value="@conn.ConnectionId" />
+                            <button type="submit" class="btn-conn btn-conn-danger" onclick="return confirm('Remover esta ligação?')">🗑</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

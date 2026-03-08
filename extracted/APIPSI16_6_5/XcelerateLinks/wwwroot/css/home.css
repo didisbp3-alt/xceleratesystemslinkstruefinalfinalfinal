@@ -1,0 +1,450 @@
+﻿:root {
+    --primary: #0052CC;
+    --primary-700: #0040A0;
+    --muted: #6b7280;
+    --card-bg: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.04);
+    --radius: 12px;
+}
+
+/* Basic resets for this page */
+.hero-section {
+    padding: 3.25rem 0;
+    background: linear-gradient(180deg, rgba(10,14,39,0.98), rgba(20,24,41,0.98));
+    color: #e8ecf5;
+}
+
+.container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Skip link */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+    .skip-link:focus {
+        left: 1rem;
+        top: 1rem;
+        width: auto;
+        height: auto;
+        padding: 0.4rem 0.6rem;
+        background: #fff;
+        color: #000;
+        z-index: 9999;
+    }
+
+/* HERO */
+.hero-inner {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hero-content {
+    max-width: 62%;
+}
+
+    .hero-content h1 {
+        font-size: 2.1rem;
+        line-height: 1.05;
+        margin: 0 0 0.75rem;
+        font-weight: 800;
+        background: linear-gradient(90deg,var(--primary),#00DD55);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+.hero-subtitle {
+    color: rgba(232,236,245,0.85);
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg,var(--primary),var(--primary-700));
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(0,82,204,0.22);
+}
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+    }
+
+.btn-outline, .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #e8ecf5;
+}
+
+    .btn-outline:hover {
+        background: rgba(255,255,255,0.02);
+    }
+
+.btn-cta {
+    padding: 0.9rem 1.6rem;
+    font-size: 1.02rem;
+    border-radius: 14px;
+    background: linear-gradient(90deg,#00B37E,#0066CC);
+    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.16);
+}
+
+/* hero highlights */
+.hero-highlights {
+    display: flex;
+    gap: 1.2rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: rgba(232,236,245,0.75);
+    margin-top: 0.5rem;
+}
+
+    .hero-highlights li {
+        font-size: 0.95rem;
+    }
+
+/* hero aside */
+.hero-aside {
+    width: 36%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.hero-card {
+    width: 320px;
+    height: 220px;
+    background: var(--card-bg);
+    border-radius: 18px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 20px 50px rgba(2,6,23,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+}
+
+.hero-logo {
+    max-width: 140px;
+    margin-bottom: 0.6rem;
+}
+
+/* STATS */
+.stats-outer {
+    margin-top: 2.25rem;
+}
+
+.stats-grid {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.stat {
+    background: var(--glass);
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    text-align: center;
+    flex: 1;
+    margin: 0.25rem;
+}
+
+.stat-number {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.stat-label {
+    color: var(--muted);
+    margin-top: 0.25rem;
+    font-weight: 700;
+}
+
+/* FEATURES */
+.features-section {
+    padding: 2.5rem 0;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    font-weight: 800;
+    color: #e8ecf5;
+}
+
+.section-subtitle {
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.feature-card {
+    background: var(--card-bg);
+    padding: 1.1rem;
+    border-radius: 12px;
+    min-height: 140px;
+    display: flex;
+    gap: 0.8rem;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+    .feature-card h3 {
+        margin: 0.25rem 0;
+        font-size: 1rem;
+    }
+
+.feature-icon {
+    font-size: 1.4rem;
+}
+
+/* OPPORTUNITIES */
+.featured-section {
+    margin-top: 1.75rem;
+    margin-bottom: 1.75rem;
+}
+
+.opportunities-grid {
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+    gap: 1rem;
+}
+
+.opportunity-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.opportunity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.opportunity-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.opportunity-company {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 0.2rem;
+}
+
+.opportunity-description {
+    color: rgba(232,236,245,0.9);
+    min-height: 48px;
+}
+
+.opportunity-meta {
+    display: flex;
+    gap: 0.8rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.opportunity-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+    align-items: center;
+}
+
+/* badges & small */
+.badge {
+    background: rgba(255,255,255,0.04);
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #e8ecf5;
+}
+
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* CTA */
+.cta-section {
+    padding: 3rem 0;
+    background: linear-gradient(135deg, rgba(0,82,204,0.06), rgba(0,221,85,0.04));
+    margin: 3rem 0;
+    border-radius: 14px;
+}
+
+.cta-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.cta-content h2 {
+    font-size: 1.6rem;
+    margin: 0 0 0.5rem;
+}
+
+.cta-content p {
+    color: var(--muted);
+    margin: 0 0 0.5rem;
+}
+
+.cta-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* small utilities */
+.container .section-title + .section-subtitle {
+    margin-bottom: 1rem;
+}
+
+/* Accessibility & focus */
+a:focus, button:focus, input:focus {
+    outline: 3px solid rgba(0,82,204,0.18);
+    outline-offset: 2px;
+}
+
+/* Footer (simple) */
+.site-footer {
+    padding: 2rem 0;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .hero-inner {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .hero-content {
+        max-width: 100%;
+    }
+
+    .hero-aside {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .opportunities-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-content h1 {
+        font-size: 1.6rem;
+    }
+
+    .stat-number {
+        font-size: 1.15rem;
+    }
+
+    .hero-card {
+        width: 100%;
+        height: auto;
+        padding: 1rem;
+    }
+
+    .cta-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-highlights {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .hero-content h1 {
+        font-size: 1.35rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .stat {
+        padding: 0.8rem;
+    }
+
+    .hero-logo {
+        max-width: 110px;
+    }
+
+    .hero-card {
+        border-radius: 10px;
+    }
+}
+
+/* small visual refinements for cards */
+.opportunity-card:hover {
+    transform: translateY(-6px);
+    transition: transform 220ms ease;
+    box-shadow: 0 18px 40px rgba(2,6,23,0.25);
+}
+
+/* End of file */

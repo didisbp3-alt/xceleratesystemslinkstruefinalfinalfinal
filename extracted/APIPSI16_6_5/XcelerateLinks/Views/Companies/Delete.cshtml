@@ -1,0 +1,22 @@
+@model Company
+@{
+    ViewData["Title"] = "Eliminar empresa";
+}
+
+<h2 class="mb-3">Eliminar empresa</h2>
+
+<p>Tem a certeza que deseja eliminar esta empresa?</p>
+
+<dl class="row">
+    <dt class="col-sm-3">Nome</dt>
+    <dd class="col-sm-9">@Model.Name</dd>
+    <dt class="col-sm-3">Indústria</dt>
+    <dd class="col-sm-9">@Model.Industry</dd>
+</dl>
+
+<form asp-action="DeleteConfirmed" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="CompanyId" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Details" asp-route-id="@Model.CompanyId" class="btn btn-outline-secondary">Cancelar</a>
+</form>

@@ -1,0 +1,22 @@
+@model Chat
+@{
+    ViewData["Title"] = "Eliminar conversa";
+}
+
+<h2 class="mb-3">Eliminar conversa</h2>
+
+<p>Tem a certeza que deseja eliminar esta conversa?</p>
+
+<dl class="row">
+    <dt class="col-sm-3">Tipo</dt>
+    <dd class="col-sm-9">@Model.Type</dd>
+    <dt class="col-sm-3">Criado por</dt>
+    <dd class="col-sm-9">@Model.CreatedByUserId</dd>
+</dl>
+
+<form asp-action="DeleteConfirmed" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ChatId" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Details" asp-route-id="@Model.ChatId" class="btn btn-outline-secondary">Cancelar</a>
+</form>

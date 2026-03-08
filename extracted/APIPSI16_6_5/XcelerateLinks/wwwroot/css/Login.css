@@ -1,0 +1,308 @@
+/* ===== Centered card + restore original button & input aesthetics =====
+   Replace the previous card block with this. Keeps the wider size but
+   centers the card and restores the original login styles for inputs
+   and buttons so you keep the polished look.
+*/
+
+/* Ensure the hero wrapper centers the card */
+.login-hero.login-centered {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, #0a0e27 0%, #141829 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Make the login-card wider on desktop while keeping the same responsive collapse */
+.login-card {
+    max-width: 1100px; /* kept wider as requested */
+    width: 100%;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr; /* left panel slightly larger */
+    gap: 0;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 0; /* inner panels provide padding */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* Center the card inside its wrapper column (helps when hero-right is full-width) */
+.hero-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    max-width: 1100px;
+}
+
+/* Left side: illustration / welcoming panel */
+.card-illustration {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(0,82,204,0.06), rgba(0,221,85,0.04));
+    border-right: 1px solid rgba(255,255,255,0.03);
+    min-height: 100%;
+}
+
+body.light-theme .card-illustration {
+    background: linear-gradient(180deg, rgba(0,82,204,0.03), rgba(0,221,85,0.02));
+    border-right: 1px solid rgba(0,0,0,0.03);
+}
+
+.illustration-logo {
+    height: 200px;
+    width: auto;
+    margin: 0 auto;
+    filter: drop-shadow(0 8px 20px rgba(0,82,204,0.12));
+}
+
+.card-illustration h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0052CC, #00DD55);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.card-illustration p.illustration-subtitle {
+    margin: 0;
+    color: rgba(232,236,245,0.9);
+    font-size: 0.95rem;
+}
+
+/* Right side: form panel */
+.card-form {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #141829 0%, #1f2847 100%);
+    color: #e8ecf5;
+}
+
+/* Keep the same header layout */
+.card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+}
+
+    .card-header .logo {
+        height: 44px;
+        width: auto;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 800;
+        text-align: center;
+    }
+
+/* ===== Re-introduce original input/button/link styles (higher specificity) ===== */
+
+/* Inputs */
+.card-form .form-control,
+.login-card .form-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e8ecf5;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+body.light-theme .card-form .form-control,
+body.light-theme .login-card .form-control {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #0a0e27;
+}
+
+.card-form .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.light-theme .card-form .form-control::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.card-form .form-control:focus,
+.login-card .form-control:focus {
+    border-color: #0052CC;
+    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8ecf5;
+    outline: none;
+}
+
+body.light-theme .card-form .form-control:focus,
+body.light-theme .login-card .form-control:focus {
+    background: #ffffff;
+    color: #0a0e27;
+}
+
+/* Primary login/register button — restore gradient, shadow, uppercase, hover */
+.card-form .login-btn,
+.login-card .login-btn {
+    background: linear-gradient(135deg, #0052CC, #0040A0);
+    box-shadow: 0 8px 25px rgba(0, 82, 204, 0.3);
+    border: none;
+    color: white;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 10px;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+    .card-form .login-btn:hover,
+    .login-card .login-btn:hover {
+        background: linear-gradient(135deg, #0040A0, #002D70);
+        box-shadow: 0 12px 35px rgba(0, 82, 204, 0.4);
+        transform: translateY(-3px);
+    }
+
+    .card-form .login-btn:active,
+    .login-card .login-btn:active {
+        transform: translateY(0);
+    }
+
+/* Secondary links */
+.card-form .secondary-link,
+.login-card .secondary-link {
+    display: block;
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #0052CC;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+body.light-theme .card-form .secondary-link,
+body.light-theme .login-card .secondary-link {
+    color: #0052CC;
+}
+
+.card-form .secondary-link:hover,
+.login-card .secondary-link:hover {
+    color: #00DD55;
+    text-decoration: underline;
+}
+
+/* Validation and alerts */
+.card-form .alert-danger,
+.login-card .alert-danger {
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: #ff9999;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+body.light-theme .card-form .alert-danger,
+body.light-theme .login-card .alert-danger {
+    background: #e8f4f8;
+    border-color: #e8f4f8;
+    color: #e8f4f8;
+}
+
+/* Form small text */
+.card-form .form-label,
+.login-card .form-label {
+    color: #e8ecf5;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    display: block;
+}
+
+body.light-theme .card-form .form-label,
+body.light-theme .login-card .form-label {
+    color: #0a0e27;
+}
+
+/* Keep login card's internal color consistent on light/dark themes */
+body.light-theme .card-form {
+    background: #e8f4f8;
+    color: #0a0e27;
+}
+
+/* Responsive: single column on small screens (hide left illustration) */
+@media (max-width: 768px) {
+    .login-card {
+        grid-template-columns: 1fr;
+        border-radius: 14px;
+    }
+
+    .card-illustration {
+        display: none;
+    }
+
+    .hero-right {
+        max-width: 460px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .card-form {
+        padding: 1.5rem;
+    }
+}
+
+/* Tablet adjustments */
+@media (max-width: 992px) and (min-width: 769px) {
+    .login-card {
+        max-width: 900px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .card-illustration {
+        padding: 1.8rem;
+    }
+
+    .card-form {
+        padding: 1.8rem;
+    }
+}
+
+/* Small mobile tweaks */
+@media (max-width: 420px) {
+    .card-form {
+        padding: 1rem;
+    }
+
+    .card-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .card-illustration h4 {
+        font-size: 1.05rem;
+    }
+}

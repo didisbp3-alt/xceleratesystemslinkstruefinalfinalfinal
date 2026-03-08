@@ -1,0 +1,104 @@
+@model UserFilterViewModel
+@{
+    ViewData["Title"] = "Utilizadores";
+    var nationalities = ViewBag.Nationalities as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+    var jobRoles = ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Utilizadores</h2>
+    @if (Model.Users.Any(u => u.Role == 3))
+    {
+        <span class="badge bg-warning text-dark">⚠️ @Model.Users.Count(u => u.Role == 3) pedido(s) pendente(s)</span>
+    }
+</div>
+
+<form asp-action="Index" method="get" class="row g-3 align-items-end mb-4">
+    <div class="col-md-4">
+        <label asp-for="JobPreference" class="form-label">Área de trabalho</label>
+        <select asp-for="JobPreference" class="form-select">
+            <option value="">— Todas as áreas —</option>
+            @foreach (var jr in jobRoles)
+            {
+                if (Model.JobPreference == jr.Id)
+                {
+                    <option value="@jr.Id" selected>@jr.Name</option>
+                }
+                else
+                {
+                    <option value="@jr.Id">@jr.Name</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Nationality" class="form-label">Nacionalidade</label>
+        <select asp-for="Nationality" class="form-select">
+            <option value="">— Todas as nacionalidades —</option>
+            @foreach (var n in nationalities)
+            {
+                if (Model.Nationality == n.Id)
+                {
+                    <option value="@n.Id" selected>@n.Name</option>
+                }
+                else
+                {
+                    <option value="@n.Id">@n.Name</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Limpar</a>
+    </div>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">@Model.ErrorMessage</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Função</th>
+            <th>Subscrição</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model.Users)
+        {
+            var roleName = user.Role == 0 ? "Admin" : user.Role == 2 ? "Empregador" : user.Role == 3 ? "⏳ Pendente" : "Utilizador";
+            var roleColor = user.Role == 0 ? "danger" : user.Role == 2 ? "success" : user.Role == 3 ? "warning" : "secondary";
+            var planName = user.SubscriptionPlan switch { 1 => "Pro", 2 => "Enterprise", _ => "Free" };
+            var planColor = user.SubscriptionPlan switch { 1 => "primary", 2 => "success", _ => "secondary" };
+            <tr class="@(user.Role == 3 ? "table-warning" : "")">
+                <td>@user.Name</td>
+                <td>@user.Email</td>
+                <td><span class="badge bg-@roleColor">@roleName</span></td>
+                <td><span class="badge bg-@planColor">@planName</span></td>
+                <td class="text-end">
+                    <a asp-action="Details" asp-route-id="@user.UserId" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                    <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-sm btn-outline-primary">Editar</a>
+                    <a asp-action="Delete" asp-route-id="@user.UserId" class="btn btn-sm btn-outline-danger">Delete</a>
+                    @if (user.Role == 3)
+                    {
+                        <form method="post" asp-action="ApproveEmployer" asp-route-id="@user.UserId" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-success">✓ Aprovar</button>
+                        </form>
+                        <form method="post" asp-action="RejectEmployer" asp-route-id="@user.UserId" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger">✗</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

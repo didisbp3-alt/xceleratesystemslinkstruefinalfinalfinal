@@ -1,0 +1,165 @@
+@{
+    ViewData["Title"] = "Início";
+}
+
+<!-- HERO SECTION -->
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>Conecte Talento com Oportunidades</h1>
+                <p class="hero-subtitle">
+                    Encontre as melhores oportunidades de emprego ou recrute os melhores talentos.
+                    Xcelerate Links é a plataforma que acelera sua carreira.
+                </p>
+                <div class="hero-actions">
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/Opportunities" class="btn-primary">Explorar Oportunidades</a>
+                        <a href="/Users" class="btn-secondary">Ver Talentos</a>
+                    }
+                    else
+                    {
+                        <a href="/Account/Register" class="btn-primary">Começar Agora</a>
+                        <a href="/Account/Login" class="btn-secondary">Entrar</a>
+                    }
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-logo-container">
+                    <img src="~/images/xcelerate-logo.png" alt="Xcelerate Links" class="hero-logo" />
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- STATS SECTION -->
+@{
+    dynamic stats = ViewBag.Stats;
+    var oppCount = 0;
+    var userCount = 0;
+    var companyCount = 0;
+
+    if (stats != null)
+    {
+        // Use GetType().GetProperty() instead of dynamic property access
+        var oppCountProp = stats.GetType().GetProperty("OppCount");
+        var userCountProp = stats.GetType().GetProperty("UserCount");
+        var companyCountProp = stats.GetType().GetProperty("CompanyCount");
+
+        oppCount = oppCountProp?.GetValue(stats) as int? ?? 0;
+        userCount = userCountProp?.GetValue(stats) as int? ?? 0;
+        companyCount = companyCountProp?.GetValue(stats) as int? ?? 0;
+    }
+}
+
+<section class="container mt-5 scroll-reveal">
+    <div class="stats-section">
+        <div class="stat-card scroll-reveal">
+            <div class="stat-number" data-target="@oppCount">@oppCount</div>
+            <div class="stat-label">Oportunidades</div>
+        </div>
+        <div class="stat-card scroll-reveal">
+            <div class="stat-number" data-target="@userCount">@userCount</div>
+            <div class="stat-label">Utilizadores Ativos</div>
+        </div>
+        <div class="stat-card scroll-reveal">
+            <div class="stat-number" data-target="@companyCount">@companyCount</div>
+            <div class="stat-label">Empresas</div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES SECTION -->
+<section class="features-section scroll-reveal">
+    <div class="container">
+        <h2 class="section-title">Por Que Escolher Xcelerate Links?</h2>
+        <p class="section-subtitle">Tudo o que você precisa para crescer profissionalmente em um único lugar.</p>
+
+        <div class="features-grid">
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">🎯</div>
+                <h3>Oportunidades Personalizadas</h3>
+                <p>Receba recomendações de oportunidades baseadas no seu perfil e preferências.</p>
+            </div>
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">💬</div>
+                <h3>Chat Integrado</h3>
+                <p>Comunique-se diretamente com recrutadores e candidatos em tempo real.</p>
+            </div>
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">📊</div>
+                <h3>Dashboard Completo</h3>
+                <p>Acompanhe suas candidaturas e gerencie oportunidades com facilidade.</p>
+            </div>
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">🔐</div>
+                <h3>Segurança Garantida</h3>
+                <p>Seus dados estão protegidos com as melhores práticas de segurança.</p>
+            </div>
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">🌍</div>
+                <h3>Alcance Global</h3>
+                <p>Acesse oportunidades de empresas do mundo todo.</p>
+            </div>
+            <div class="feature-card scroll-reveal">
+                <div class="feature-icon">⚡</div>
+                <h3>Rápido e Eficiente</h3>
+                <p>Processo de candidatura simplificado e resposta rápida dos recrutadores.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURED OPPORTUNITIES SECTION -->
+@if (ViewBag.FeaturedOpportunities != null && ViewBag.FeaturedOpportunities.Count > 0)
+{
+    <section class="container mt-5 mb-5">
+        <h2 class="section-title">Oportunidades em Destaque</h2>
+        <p class="section-subtitle">Confira as melhores oportunidades disponíveis agora.</p>
+
+        <div class="opportunities-grid">
+            @foreach (var opp in ViewBag.FeaturedOpportunities)
+            {
+                <div class="opportunity-card">
+                    <div class="opportunity-header">
+                        <div>
+                            <h4 class="opportunity-title">@opp.Title</h4>
+                            <p class="opportunity-company">@opp.Company?.Name</p>
+                        </div>
+                        <span class="opportunity-badge">@opp.JobType</span>
+                    </div>
+                    <p class="opportunity-description">@opp.Description?.Substring(0, Math.Min(100, opp.Description.Length))...</p>
+                    <div class="opportunity-meta">
+                        <span>💼 @opp.JobPreference</span>
+                        <span>📍 @opp.Location</span>
+                        <span>💰 @opp.Salary</span>
+                    </div>
+                    <div class="opportunity-actions">
+                        <a href="/Opportunities/@opp.Id" class="btn-view">Ver Detalhes</a>
+                        @if (User?.Identity?.IsAuthenticated == true)
+                        {
+                            <button class="btn-apply">Candidatar</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+<!-- CTA SECTION -->
+<section style="padding: 4rem 0; background: linear-gradient(135deg, rgba(0,82,204,0.1) 0%, rgba(0,221,85,0.1) 100%); margin: 3rem 0;">
+    <div class="container text-center">
+        <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem;">Pronto para Acelerar Sua Carreira?</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 2rem; color: var(--dark-text-muted);">
+            Junte-se a milhares de profissionais que já encontraram suas oportunidades ideais.
+        </p>
+        @if (!User?.Identity?.IsAuthenticated ?? true)
+        {
+            <a href="/Account/Register" class="btn-primary" style="padding: 1rem 2.5rem; font-size: 1.05rem;">Criar Conta Gratuita</a>
+        }
+    </div>
+</section>

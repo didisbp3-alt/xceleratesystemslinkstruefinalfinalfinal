@@ -1,0 +1,152 @@
+@model IEnumerable<APIPSI16.Models.DTOs.UserDTO>
+@{
+    ViewData["Title"] = "Pedidos de Empregador";
+    var list = Model?.ToList() ?? new List<APIPSI16.Models.DTOs.UserDTO>();
+}
+
+<style>
+    .req-page { max-width: 860px; margin: 0 auto; padding: 2rem 0; }
+    .req-hero {
+        background: linear-gradient(135deg, rgba(0,82,204,0.12), rgba(0,221,85,0.06));
+        border-radius: 16px; padding: 1.75rem 2rem; margin-bottom: 2rem;
+    }
+    .req-hero h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .req-hero p { color: var(--dark-text-muted,#a8b2c1); margin: 0; }
+
+    .req-table-wrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; }
+    .req-table { width: 100%; border-collapse: collapse; }
+    .req-table th { padding: 0.85rem 1.25rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-text-muted,#a8b2c1); border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+    .req-table td { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+    .req-table tr:last-child td { border-bottom: none; }
+    .req-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .user-cell { display: flex; align-items: center; gap: 0.75rem; }
+    .user-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,#0052CC,#00DD55); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: #fff; overflow: hidden; }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-name { font-weight: 600; font-size: 0.9rem; }
+    .user-email { font-size: 0.78rem; color: var(--dark-text-muted,#a8b2c1); }
+
+    .badge-pending { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 600; }
+
+    .btn-approve { background: rgba(0,221,85,0.12); border: 1px solid rgba(0,221,85,0.3); color: #00DD55; border-radius: 20px; padding: 0.3rem 0.85rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+    .btn-approve:hover { background: rgba(0,221,85,0.2); }
+    .btn-reject { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; border-radius: 20px; padding: 0.3rem 0.85rem; font-size: 0.82rem; cursor: pointer; }
+    .btn-reject:hover { background: rgba(239,68,68,0.15); }
+
+    .no-requests { text-align: center; padding: 3rem; color: var(--dark-text-muted,#a8b2c1); }
+</style>
+
+<div class="container py-4">
+    <div class="req-page">
+        <a asp-controller="Home" asp-action="AdminIndex" class="btn btn-sm btn-outline-secondary mb-4">← Dashboard</a>
+
+        <div class="req-hero">
+            <h1>🏢 Pedidos de Empregador</h1>
+            <p>Utilizadores que submeteram pedido para se tornarem empregadores.</p>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div>
+        }
+
+        @if (!list.Any())
+        {
+            <div class="req-table-wrap">
+                <div class="no-requests">
+                    <p style="font-size:1.5rem;margin-bottom:0.5rem;">✅</p>
+                    <p>Nenhum pedido pendente de momento.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="req-table-wrap">
+                <table class="req-table">
+                    <thead>
+                        <tr>
+                            <th>Utilizador</th>
+                            <th>Nota / Empresa Solicitada</th>
+                            <th>Anexo</th>
+                            <th>Estado</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in list)
+                        {
+                            var nameParts = (user.Name ?? "U").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            var initials = nameParts.Length == 1
+                                ? nameParts[0][0].ToString().ToUpper()
+                                : (nameParts[0][0].ToString() + nameParts[^1][0].ToString()).ToUpper();
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar">
+                                            @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                                            {
+                                                <img src="@user.ProfilePictureUrl" alt="@user.Name" />
+                                            }
+                                            else
+                                            {
+                                                @initials
+                                            }
+                                        </div>
+                                        <div>
+                                            <a asp-action="Details" asp-route-id="@user.UserId" class="user-name" style="text-decoration:none;color:inherit;">@(user.Name ?? "—")</a>
+                                            <div class="user-email">@(user.Email ?? "")</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(user.EmployerRequestNote))
+                                    {
+                                        <span style="font-size:0.82rem;color:var(--dark-text-muted,#a8b2c1);">@user.EmployerRequestNote</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:0.78rem;color:var(--dark-text-muted,#a8b2c1);">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(user.EmployerRequestDocumentUrl))
+                                    {
+                                        var docUrl = user.EmployerRequestDocumentUrl;
+                                        var isImage = docUrl.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || docUrl.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || docUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
+                                        if (isImage)
+                                        {
+                                            <a href="@docUrl" target="_blank" rel="noopener">
+                                                <img src="@docUrl" alt="Anexo" style="height:40px;width:40px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.1);" />
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a href="@docUrl" target="_blank" rel="noopener" style="font-size:0.82rem;color:#4f8ef7;">📄 Ver documento</a>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:0.78rem;color:var(--dark-text-muted,#a8b2c1);">Sem anexo</span>
+                                    }
+                                </td>
+                                <td><span class="badge-pending">⏳ Pendente</span></td>
+                                <td>
+                                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                        <form method="post" asp-action="ApproveEmployer" asp-route-id="@user.UserId">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-approve">✓ Aprovar</button>
+                                        </form>
+                                        <form method="post" asp-action="RejectEmployer" asp-route-id="@user.UserId">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-reject">✗ Rejeitar</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
