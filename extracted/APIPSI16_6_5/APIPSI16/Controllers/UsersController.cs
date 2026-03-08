@@ -1,4 +1,4 @@
-﻿using APIPSI16.Data;
+using APIPSI16.Data;
 using APIPSI16.Filters;
 using APIPSI16.Models;
 using APIPSI16.Models.DTOs;
@@ -558,9 +558,6 @@ namespace APIPSI16.Controllers
             return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
         }
 
-        // PUT: api/Users/5
-        // Admins can update any user; users can update only their own record.
-        // Non-admins cannot change Role or PasswordHash through this endpoint.
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] User updated)
         {
@@ -572,9 +569,14 @@ namespace APIPSI16.Controllers
             var currentUserId = GetCurrentUserId();
             var userRole = GetCurrentUserRole();
 
-            // Only admin or owner can update
             if (userRole != "0" && existing.UserId != currentUserId)
                 return Forbid();
+
+            if (!InputValidation.IsValidPhone(updated.PhoneNumber))
+                return BadRequest("Invalid phone number format.");
+
+            if (userRole == "0" && !InputValidation.IsValidEmail(updated.Email))
+                return BadRequest("Invalid email address format.");
 
             // Non-admins: only allow a subset of fields to be changed
             if (userRole != "0")

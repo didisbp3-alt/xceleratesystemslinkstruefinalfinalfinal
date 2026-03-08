@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace APIPSI16.Models;
 
@@ -18,20 +19,19 @@ public partial class JobApplication
 
     public string? Name { get; set; }
 
-    // Extended application fields
     public string? CoverLetter { get; set; }
     public string? PhoneNumber { get; set; }
-    public string? LinkedInUrl { get; set; }
+
+    [Column("LinkedInUrl")]
+    public string? ProfessionalUrl { get; set; }
+
     public string? PortfolioUrl { get; set; }
     public int? YearsOfExperience { get; set; }
     public bool? OpenToRemote { get; set; }
-    // Comma-separated job role IDs chosen by the applicant
     public string? SelectedJobRoleIds { get; set; }
 
-    /// <summary>Response from the applicant: null=no action needed, 1=accepted, 2=declined.</summary>
     public byte? ApplicantResponse { get; set; }
 
-    /// <summary>Latest message/note from the employer, shown to the applicant at the current stage.</summary>
     public string? LatestEmployerMessage { get; set; }
 
     public virtual Opportunity Opportunity { get; set; } = null!;

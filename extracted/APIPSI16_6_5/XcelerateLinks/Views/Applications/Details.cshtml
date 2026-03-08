@@ -231,11 +231,11 @@
                 <span><a href="tel:@Model.PhoneNumber" style="color:inherit;">@Model.PhoneNumber</a></span>
             </div>
         }
-        @if (!string.IsNullOrEmpty(Model.LinkedInUrl))
+        @if (!string.IsNullOrEmpty(Model.ProfessionalUrl))
         {
             <div class="detail-row">
-                <span class="label">LinkedIn</span>
-                <span><a href="@Model.LinkedInUrl" target="_blank" rel="noopener" style="color:#60a5fa;">@Model.LinkedInUrl</a></span>
+                <span class="label">Professional Profile</span>
+                <span><a href="@Model.ProfessionalUrl" target="_blank" rel="noopener" style="color:#60a5fa;">@Model.ProfessionalUrl</a></span>
             </div>
         }
         @if (!string.IsNullOrEmpty(Model.PortfolioUrl))

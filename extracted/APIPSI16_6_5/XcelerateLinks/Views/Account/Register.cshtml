@@ -1,4 +1,4 @@
-﻿@model XcelerateLinks.Models.ViewModels.RegisterViewModel
+@model XcelerateLinks.Models.ViewModels.RegisterViewModel
 @{
     ViewData["Title"] = "Criar conta";
 }
@@ -37,7 +37,7 @@
 
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label">Email</label>
-                        <input asp-for="Email" class="form-control" placeholder="email@exemplo.com" />
+                        <input asp-for="Email" type="email" class="form-control" placeholder="email@example.com" required title="Enter a valid email address" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
@@ -49,7 +49,7 @@
 
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label">Senha</label>
-                        <input asp-for="Password" class="form-control" placeholder="senha segura" type="password" />
+                        <input asp-for="Password" class="form-control" placeholder="Min. 8 characters" type="password" minlength="8" required />
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 

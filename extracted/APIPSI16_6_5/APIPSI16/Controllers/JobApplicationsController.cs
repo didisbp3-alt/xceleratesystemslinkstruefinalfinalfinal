@@ -62,7 +62,7 @@ namespace APIPSI16.Controllers
                 Name = string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name,
                 CoverLetter = string.IsNullOrWhiteSpace(dto.CoverLetter) ? null : dto.CoverLetter,
                 PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber,
-                LinkedInUrl = string.IsNullOrWhiteSpace(dto.LinkedInUrl) ? null : dto.LinkedInUrl,
+                ProfessionalUrl = string.IsNullOrWhiteSpace(dto.ProfessionalUrl) ? null : dto.ProfessionalUrl,
                 PortfolioUrl = string.IsNullOrWhiteSpace(dto.PortfolioUrl) ? null : dto.PortfolioUrl,
                 YearsOfExperience = dto.YearsOfExperience,
                 OpenToRemote = dto.OpenToRemote,

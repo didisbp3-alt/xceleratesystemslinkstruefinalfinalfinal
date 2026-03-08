@@ -365,3 +365,51 @@ Migrations are in `APIPSI16/Migrations/`. EF Core auto-runs pending migrations o
 - **Audit logs** are written for all significant state changes (employer approvals, application stage changes, company member changes).
 - **Notifications** are sent best-effort (wrapped in try/catch) so that a notification failure never aborts the primary operation.
 - The API uses **role-based authorization** via JWT claims. The MVC layer reads the same claims from the cookie.
+
+---
+
+## Field Validation Rules
+
+### Application Form (`POST /api/jobapplications/apply`)
+
+| Field | Rule |
+|---|---|
+| `PhoneNumber` | Optional. If provided: 7–20 characters, digits only plus `+`, spaces, `-`, `(`, `)`, `.`. Regex: `^\+?[\d\s\-(). ]{7,20}$` |
+| `ProfessionalUrl` | Optional. If provided: must be an absolute URL (validated via `[Url]` attribute). Max 300 characters. |
+| `PortfolioUrl` | Optional. If provided: must be an absolute URL. Max 300 characters. |
+
+The `LinkedInUrl` field has been renamed to `ProfessionalUrl` in all C# code and UI labels. The database column retains the name `LinkedInUrl` for backward compatibility; the property is mapped with `[Column("LinkedInUrl")]`.
+
+### Registration (`POST /api/auth/register`)
+
+| Field | Rule |
+|---|---|
+| `Name` | Required. |
+| `Email` | Required. Must be a valid email address format (validated via `[EmailAddress]`). |
+| `Password` | Required. Minimum 8 characters. |
+| `PhoneNumber` | Optional. If provided: phone format regex (same as above). |
+
+### Profile Edit (`PUT /api/users/{id}`)
+
+| Field | Rule |
+|---|---|
+| `PhoneNumber` | Optional. If provided: phone format regex validated server-side in `UpdateUser`. |
+| `Email` | Admin-only editable. If provided: validated against `^[^@\s]+@[^@\s]+\.[^@\s]+$`. |
+
+### Client-side HTML Validation
+
+All form inputs for phone numbers use `type="tel"` with `pattern="^\+?[\d\s\-(). ]{7,20}$"`.
+All URL fields use `type="url"` which browsers validate for absolute URL format.
+Email fields use `type="email"` which browsers validate for email format.
+Password fields on the registration form use `minlength="8"`.
+
+---
+
+## LinkedIn Removal
+
+All user-facing mentions of "LinkedIn" have been removed from the application UI:
+
+- The footer no longer contains a "LinkedIn" social link.
+- The application form field previously labelled "LinkedIn Profile" is now labelled "Professional Profile URL" with a neutral placeholder.
+- The translation map in `_Layout.cshtml` was updated accordingly.
+- The `JobApplication.LinkedInUrl` property has been renamed to `ProfessionalUrl` in C# code while retaining the `LinkedInUrl` database column name for schema compatibility.

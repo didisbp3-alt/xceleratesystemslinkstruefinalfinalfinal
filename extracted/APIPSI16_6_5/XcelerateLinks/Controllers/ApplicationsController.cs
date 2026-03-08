@@ -136,7 +136,7 @@ namespace XcelerateLinks.Mvc.Controllers
                 Name = model.Application.Name,
                 CoverLetter = model.Application.CoverLetter,
                 PhoneNumber = model.Application.PhoneNumber,
-                LinkedInUrl = model.Application.LinkedInUrl,
+                ProfessionalUrl = model.Application.ProfessionalUrl,
                 PortfolioUrl = model.Application.PortfolioUrl,
                 YearsOfExperience = model.Application.YearsOfExperience,
                 OpenToRemote = model.Application.OpenToRemote,
@@ -361,7 +361,7 @@ namespace XcelerateLinks.Mvc.Controllers
             public string? Name { get; set; }
             public string? CoverLetter { get; set; }
             public string? PhoneNumber { get; set; }
-            public string? LinkedInUrl { get; set; }
+            public string? ProfessionalUrl { get; set; }
             public string? PortfolioUrl { get; set; }
             public int? YearsOfExperience { get; set; }
             public bool? OpenToRemote { get; set; }

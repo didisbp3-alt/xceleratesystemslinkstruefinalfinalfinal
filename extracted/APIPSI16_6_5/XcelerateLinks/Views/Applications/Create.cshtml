@@ -136,19 +136,19 @@
                     </div>
                     <div class="form-group-styled">
                         <label asp-for="Application.PhoneNumber">Número de telefone</label>
-                        <input asp-for="Application.PhoneNumber" class="form-control" placeholder="+351 9xx xxx xxx" />
+                        <input asp-for="Application.PhoneNumber" type="tel" class="form-control" placeholder="+351 9xx xxx xxx" pattern="^\+?[\d\s\-(). ]{7,20}$" title="Enter a valid phone number (7–20 digits, spaces, hyphens, parentheses, or + allowed)" />
                         <span asp-validation-for="Application.PhoneNumber" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="field-row">
                     <div class="form-group-styled">
-                        <label asp-for="Application.LinkedInUrl">Perfil LinkedIn</label>
-                        <input asp-for="Application.LinkedInUrl" class="form-control" placeholder="https://linkedin.com/in/..." />
-                        <span asp-validation-for="Application.LinkedInUrl" class="text-danger"></span>
+                        <label asp-for="Application.ProfessionalUrl">Professional Profile URL</label>
+                        <input asp-for="Application.ProfessionalUrl" type="url" class="form-control" placeholder="https://yourprofile.example.com" />
+                        <span asp-validation-for="Application.ProfessionalUrl" class="text-danger"></span>
                     </div>
                     <div class="form-group-styled">
                         <label asp-for="Application.PortfolioUrl">Portefólio / Website</label>
-                        <input asp-for="Application.PortfolioUrl" class="form-control" placeholder="https://..." />
+                        <input asp-for="Application.PortfolioUrl" type="url" class="form-control" placeholder="https://yourportfolio.com" />
                         <span asp-validation-for="Application.PortfolioUrl" class="text-danger"></span>
                     </div>
                 </div>

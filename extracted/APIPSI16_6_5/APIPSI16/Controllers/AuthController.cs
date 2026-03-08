@@ -1,4 +1,5 @@
 ﻿using APIPSI16.Data;
+using System.ComponentModel.DataAnnotations;
 using APIPSI16.Models;
 using APIPSI16.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -303,15 +304,26 @@ namespace APIPSI16.Controllers
 
     public class RegisterRequest
     {
+        [Required]
         public string Name { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress(ErrorMessage = "Invalid email address format.")]
         public string Email { get; set; } = string.Empty;
+
         public string? Username { get; set; }
+
+        [RegularExpression(InputValidation.PhonePattern, ErrorMessage = "Invalid phone number format.")]
         public string? PhoneNumber { get; set; }
+
         public int? Nationality { get; set; }
         public int? JobPreference { get; set; }
         public string? ProfileBio { get; set; }
         public DateOnly? DoB { get; set; }
         public int? Role { get; set; } = 1;
+
+        [Required]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
         public string Password { get; set; } = string.Empty;
     }
 }

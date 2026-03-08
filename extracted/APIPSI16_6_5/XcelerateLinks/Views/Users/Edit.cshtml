@@ -28,13 +28,13 @@
 
                         <div class="mb-3">
                             <label asp-for="Email" class="form-label">Email</label>
-                            <input asp-for="Email" type="email" class="form-control" required />
+                            <input asp-for="Email" type="email" class="form-control" required title="Enter a valid email address" />
                             <span asp-validation-for="Email" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="PhoneNumber" class="form-label">Phone Number</label>
-                            <input asp-for="PhoneNumber" class="form-control" />
+                            <input asp-for="PhoneNumber" type="tel" class="form-control" placeholder="+351 9xx xxx xxx" pattern="^\+?[\d\s\-(). ]{7,20}$" title="Enter a valid phone number (7–20 digits, spaces, hyphens, parentheses, or + allowed)" />
                             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                         </div>
 
