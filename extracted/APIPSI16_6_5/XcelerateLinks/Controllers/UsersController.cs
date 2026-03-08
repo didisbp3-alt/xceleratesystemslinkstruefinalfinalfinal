@@ -168,6 +168,23 @@ namespace XcelerateLinks.Mvc.Controllers
             else
                 ViewBag.Locations = Array.Empty<LookupItem>();
 
+            var profileResp = await client.GetAsync($"api/users/{id}/profile");
+            if (profileResp.IsSuccessStatusCode)
+            {
+                var profile = await profileResp.Content.ReadFromJsonAsync<APIPSI16.Models.DTOs.UserProfileDTO>();
+                ViewBag.SelectedJobRoleIds = profile?.JobRolePreferences?.Select(p => p.JobRoleId).ToList() ?? new List<int>();
+            }
+            else
+            {
+                ViewBag.SelectedJobRoleIds = new List<int>();
+            }
+
+            var companiesResp = await client.GetAsync("api/companies");
+            if (companiesResp.IsSuccessStatusCode)
+                ViewBag.Companies = await companiesResp.Content.ReadFromJsonAsync<IEnumerable<CompanyInfo>>() ?? Array.Empty<CompanyInfo>();
+            else
+                ViewBag.Companies = Array.Empty<CompanyInfo>();
+
             return View(user);
         }
 
@@ -194,7 +211,7 @@ namespace XcelerateLinks.Mvc.Controllers
         // EDIT USER POST
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, UserDTO model)
+        public async Task<IActionResult> Edit(int id, UserDTO model, [FromForm] List<int>? SelectedJobRoleIds = null)
         {
             if (!await ValidateSessionAsync())
                 return RedirectToAction("Login", "Account");
@@ -209,6 +226,9 @@ namespace XcelerateLinks.Mvc.Controllers
                 ModelState.AddModelError("", await SafeReadStringAsync(resp) ?? "Unable to update user.");
                 return View(model);
             }
+
+            var prefIds = SelectedJobRoleIds ?? new List<int>();
+            await client.PutAsJsonAsync($"api/users/{id}/job-preferences", prefIds);
 
             return RedirectToAction(nameof(Details), new { id });
         }

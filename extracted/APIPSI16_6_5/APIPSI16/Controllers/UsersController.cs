@@ -623,6 +623,41 @@ namespace APIPSI16.Controllers
             return NoContent();
         }
 
+        // PUT: api/users/{id}/job-preferences
+        [HttpPut("{id}/job-preferences")]
+        public async Task<IActionResult> UpdateJobPreferences(int id, [FromBody] List<int> jobRoleIds)
+        {
+            var currentUserId = GetCurrentUserId();
+            var userRole = GetCurrentUserRole();
+
+            if (userRole != "0" && currentUserId != id)
+                return Forbid();
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            var existing = await _context.UserJobPreferences
+                .Where(p => p.UserId == id)
+                .ToListAsync();
+            _context.UserJobPreferences.RemoveRange(existing);
+
+            var now = DateTime.UtcNow;
+            var newPrefs = (jobRoleIds ?? new List<int>())
+                .Distinct()
+                .Select(rid => new UserJobPreference
+                {
+                    UserId = id,
+                    JobRoleId = rid,
+                    CreatedAt = now
+                })
+                .ToList();
+
+            await _context.UserJobPreferences.AddRangeAsync(newPrefs);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         // DELETE: api/Users/5
         // Admin only
         [HttpDelete("{id}")]

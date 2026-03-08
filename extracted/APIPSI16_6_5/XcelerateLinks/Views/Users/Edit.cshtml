@@ -110,16 +110,18 @@
                         <div class="mb-3">
                             <label class="form-label">Preferências de cargo</label>
                             <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.75rem;max-height:180px;overflow-y:auto;">
+                                @{
+                                    var selectedJobRoleIds = ViewBag.SelectedJobRoleIds as IEnumerable<int> ?? Enumerable.Empty<int>();
+                                }
                                 @foreach (var j in (ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
                                 {
                                     <label style="display:flex;align-items:center;gap:0.5rem;padding:0.2rem 0;cursor:pointer;font-size:0.88rem;">
                                         <input type="checkbox" name="SelectedJobRoleIds" value="@j.Id" style="accent-color:#0052CC;"
-                                            @(Model.JobPreference == j.Id ? "checked" : "") />
+                                            @(selectedJobRoleIds.Contains(j.Id) ? "checked" : "") />
                                         @j.Name
                                     </label>
                                 }
                             </div>
-                            <input type="hidden" asp-for="JobPreference" id="jobPrefHidden" />
                             <small class="text-muted">Podes escolher mais do que uma área.</small>
                         </div>
 
@@ -283,12 +285,24 @@
                                 <input type="text" id="expTitle" class="form-control form-control-sm" placeholder="Cargo / Função *" required />
                             </div>
                             <div class="col-md-6">
-                                <input type="text" id="expCompany" class="form-control form-control-sm" placeholder="Empresa *" required />
+                                <select id="expCompany" class="form-select form-select-sm searchable-select" required>
+                                    <option value="">— Empresa * —</option>
+                                    @foreach (var c in (ViewBag.Companies as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.CompanyInfo> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.CompanyInfo>()))
+                                    {
+                                        <option value="@c.Name">@c.Name</option>
+                                    }
+                                </select>
                             </div>
                         </div>
                         <div class="row g-2 mb-2">
                             <div class="col-md-4">
-                                <input type="text" id="expLocation" class="form-control form-control-sm" placeholder="Localização" />
+                                <select id="expLocation" class="form-select form-select-sm searchable-select">
+                                    <option value="">— Localização —</option>
+                                    @foreach (var loc in (ViewBag.Locations as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                    {
+                                        <option value="@loc.Name">@loc.Name (@loc.CountryName)</option>
+                                    }
+                                </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" style="font-size:0.78rem;">Início *</label>
@@ -454,15 +468,6 @@
         countrySelect.addEventListener('change', filterLocations);
         filterLocations();
     }
-    </script>
-    <script>
-    // Collect multi-select job preferences before form submit
-    document.getElementById('profileForm').addEventListener('submit', function() {
-        var checked = Array.from(document.querySelectorAll('input[name="SelectedJobRoleIds"]:checked')).map(function(el){ return el.value; });
-        if (checked.length > 0) {
-            document.getElementById('jobPrefHidden').value = checked[0];
-        }
-    });
     </script>
     <script>
     (function() {
