@@ -156,6 +156,8 @@ WeightedScore = LocationScore                               (when no roles speci
 - `GET /api/opportunities/with-match` – All opportunities with the user's match score.
 - `GET /api/opportunities/{id}/match` – Single opportunity match for the current user.
 - `POST /api/opportunities` – Create (Admin/Employer). Triggers match notifications.
+- `PUT /api/opportunities/{id}` – Update (Admin or active company member with role≥1).
+- `DELETE /api/opportunities/{id}` – Delete. Admin can delete any opportunity. Employers (role=2) can delete opportunities that belong to a company they are an active member of (CompanyMember.Role≥1). Employers cannot delete opportunities with no associated company.
 - `GET /api/opportunities/{id}/employer-matches` – Candidate match scores for an employer's opportunity.
 
 ### Job Applications Pipeline

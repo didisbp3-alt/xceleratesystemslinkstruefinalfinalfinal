@@ -1,4 +1,4 @@
-﻿    using APIPSI16.Data;
+    using APIPSI16.Data;
 using APIPSI16.Models;
 using APIPSI16.Models.DTOs;
 using APIPSI16.Services;
@@ -183,14 +183,29 @@ namespace APIPSI16.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Opportunities/5
-        // Only admins can delete opportunities
         [HttpDelete("{id}")]
-        [Authorize(Roles = "0")] // Admin only
+        [Authorize(Roles = "0,2")]
         public async Task<IActionResult> DeleteOpportunity(int id)
         {
             var opportunity = await _context.Opportunities.FindAsync(id);
             if (opportunity == null) return NotFound();
+
+            var currentUserId = GetCurrentUserId();
+            var userRole = GetCurrentUserRole();
+
+            if (userRole == "2")
+            {
+                if (!currentUserId.HasValue) return Unauthorized();
+
+                if (!opportunity.CompanyId.HasValue)
+                    return StatusCode(403, "Não tens permissão para eliminar esta vaga.");
+
+                var member = await _context.CompanyMembers
+                    .FirstOrDefaultAsync(cm => cm.CompanyId == opportunity.CompanyId.Value && cm.UserId == currentUserId.Value);
+
+                if (member == null || member.Role < 1)
+                    return StatusCode(403, "Não tens permissão para eliminar vagas desta empresa.");
+            }
 
             _context.Opportunities.Remove(opportunity);
             await _context.SaveChangesAsync();
