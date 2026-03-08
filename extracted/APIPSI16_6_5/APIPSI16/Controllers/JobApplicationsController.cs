@@ -286,7 +286,7 @@ namespace APIPSI16.Controllers
 
             var query = _db.JobApplications
                 .Include(a => a.Opportunity).ThenInclude(o => o.Company)
-                .Include(a => a.User)
+                .Include(a => a.User).ThenInclude(u => u.UserSkills).ThenInclude(us => us.Skill)
                 .Where(a => a.Opportunity != null && a.Opportunity.CompanyId == companyId);
 
             if (opportunityId.HasValue)

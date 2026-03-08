@@ -83,7 +83,7 @@ namespace XcelerateLinks.Mvc.Controllers
             => await Index(search: search);
 
         // USER DETAILS / PUBLIC PROFILE
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, string? returnUrl = null)
         {
             if (!await ValidateSessionAsync())
                 return RedirectToAction("Login", "Account");
@@ -98,6 +98,7 @@ namespace XcelerateLinks.Mvc.Controllers
 
                 var basicUser = await basicResp.Content.ReadFromJsonAsync<UserDTO>();
                 if (basicUser == null) return RedirectToAction(nameof(Index));
+                if (!string.IsNullOrEmpty(returnUrl)) ViewBag.ReturnUrl = returnUrl;
                 return View(new UserProfileDTO
                 {
                     UserId = basicUser.UserId,
@@ -112,6 +113,7 @@ namespace XcelerateLinks.Mvc.Controllers
 
             var profile = await resp.Content.ReadFromJsonAsync<UserProfileDTO>();
             if (profile == null) return RedirectToAction(nameof(Index));
+            if (!string.IsNullOrEmpty(returnUrl)) ViewBag.ReturnUrl = returnUrl;
             return View(profile);
         }
 

@@ -224,29 +224,73 @@ namespace XcelerateLinks.Mvc.Controllers
             {
                 _logger.LogWarning("Pipeline fetch failed: {Status} — {Body}",
                     resp.StatusCode, await SafeReadStringAsync(resp));
-                ViewBag.Error = "Não foi possível carregar as candidaturas.";
+                ViewBag.Error = "Could not load applications.";
+            }
+
+            // Load company opportunities for filtering
+            var oppResp = await client.GetAsync($"api/companies/{companyId}/profile");
+            if (oppResp.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var doc = await System.Text.Json.JsonDocument.ParseAsync(
+                        await oppResp.Content.ReadAsStreamAsync());
+                    if (doc.RootElement.TryGetProperty("opportunities", out var oppsEl))
+                    {
+                        var oppList = new List<Opportunity>();
+                        foreach (var oEl in oppsEl.EnumerateArray())
+                        {
+                            oEl.TryGetProperty("id", out var idEl);
+                            oEl.TryGetProperty("title", out var titleEl);
+                            oppList.Add(new Opportunity
+                            {
+                                Id = idEl.ValueKind == System.Text.Json.JsonValueKind.Number
+                                    ? idEl.GetInt32() : 0,
+                                Title = titleEl.ValueKind == System.Text.Json.JsonValueKind.String
+                                    ? titleEl.GetString() : null,
+                                CompanyId = companyId
+                            });
+                        }
+                        ViewBag.Opportunities = oppList.Where(o => o.Id > 0).ToList();
+                    }
+                    else
+                    {
+                        ViewBag.Opportunities = new List<Opportunity>();
+                    }
+                }
+                catch
+                {
+                    ViewBag.Opportunities = new List<Opportunity>();
+                }
+            }
+            else
+            {
+                ViewBag.Opportunities = new List<Opportunity>();
             }
 
             ViewBag.Applications = apps.ToList();
             return View("Pipeline");
         }
 
-        // POST: update application status (employer only)
+        // POST: update application status via AJAX (employer only) — returns JSON
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStatus(int id, byte newStatus, int? returnCompanyId = null)
+        public async Task<IActionResult> UpdateStatusAjax(int id, byte newStatus, int companyId)
         {
             if (!await ValidateSessionAsync())
-                return RedirectToAction("Login", "Account");
+                return Json(new { success = false, error = "Not authenticated" });
 
             var client = CreateAuthorizedClient();
             var payload = new { NewStatus = newStatus };
             var resp = await client.PostAsJsonAsync($"api/jobapplications/{id}/status", payload);
 
-            if (returnCompanyId.HasValue)
-                return RedirectToAction("Pipeline", "Applications", new { companyId = returnCompanyId.Value });
+            if (!resp.IsSuccessStatusCode)
+            {
+                var errorBody = await SafeReadStringAsync(resp) ?? "Failed to update status.";
+                return Json(new { success = false, error = errorBody });
+            }
 
-            return RedirectToAction(nameof(Details), new { id });
+            return Json(new { success = true, applicationId = id, newStatus });
         }
 
         private async Task<IEnumerable<Opportunity>> LoadOpportunitiesAsync()
