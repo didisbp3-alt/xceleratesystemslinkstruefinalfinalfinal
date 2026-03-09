@@ -674,48 +674,117 @@ namespace APIPSI16.Controllers
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Remove all records that reference this user via non-cascading FKs
-                // before deleting the user to avoid FK constraint violations.
+                // Remove / nullify every record that references this user via a non-cascading FK
+                // to avoid constraint violations on the final delete.
+                // Note: Ratings (ON DELETE CASCADE) and SkillValidationRequests (ON DELETE CASCADE)
+                // are handled automatically by the database and do not need explicit deletes.
 
-                // Sessions (recently added table without cascade — direct cause of the regression)
-                await _context.Sessions.Where(s => s.UserId == id).ExecuteDeleteAsync();
+                // Sessions
+                await _context.Sessions
+                    .Where(s => s.UserId == id)
+                    .ExecuteDeleteAsync();
 
                 // Notifications where user is recipient or actor
-                await _context.Notifications.Where(n => n.UserId == id || n.ActorUserId == id).ExecuteDeleteAsync();
+                await _context.Notifications
+                    .Where(n => n.UserId == id || n.ActorUserId == id)
+                    .ExecuteDeleteAsync();
 
                 // Company memberships
-                await _context.CompanyMembers.Where(m => m.UserId == id).ExecuteDeleteAsync();
+                await _context.CompanyMembers
+                    .Where(m => m.UserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Social connections (user is either requester or addressee)
-                await _context.Connections.Where(c => c.RequesterUserId == id || c.AddresseeUserId == id).ExecuteDeleteAsync();
+                // Social connections (requester or addressee)
+                await _context.Connections
+                    .Where(c => c.RequesterUserId == id || c.AddresseeUserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Employer candidate history entries
-                await _context.EmployerCandidateHistories.Where(h => h.UserId == id).ExecuteDeleteAsync();
+                // Employer candidate history
+                await _context.EmployerCandidateHistories
+                    .Where(h => h.UserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Job applications (child InterviewRounds use nullable FK — safe to leave)
-                await _context.JobApplications.Where(a => a.UserId == id).ExecuteDeleteAsync();
+                // InterviewRounds must be deleted before JobApplications because
+                // InterviewRound.JobApplicationId is non-nullable with NO ACTION.
+                var userApplicationIds = _context.JobApplications
+                    .Where(a => a.UserId == id)
+                    .Select(a => a.JobApplicationId);
+                await _context.InterviewRounds
+                    .Where(r => userApplicationIds.Contains(r.JobApplicationId))
+                    .ExecuteDeleteAsync();
 
-                // Skill endorsements made by this user, then the user's own skills
-                await _context.SkillEndorsements.Where(e => e.EndorserUserId == id).ExecuteDeleteAsync();
-                await _context.UserSkills.Where(s => s.UserId == id).ExecuteDeleteAsync();
+                // Job applications
+                await _context.JobApplications
+                    .Where(a => a.UserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Job preferences
-                await _context.UserJobPreferences.Where(p => p.UserId == id).ExecuteDeleteAsync();
+                // Skill endorsements: both endorsements MADE by this user and endorsements
+                // ON this user's skills from other endorsers (must precede UserSkills delete).
+                var userSkillIds = _context.UserSkills
+                    .Where(us => us.UserId == id)
+                    .Select(us => us.UserSkillId);
+                await _context.SkillEndorsements
+                    .Where(e => e.EndorserUserId == id || userSkillIds.Contains(e.UserSkillId))
+                    .ExecuteDeleteAsync();
+
+                // User skills and job preferences
+                await _context.UserSkills
+                    .Where(s => s.UserId == id)
+                    .ExecuteDeleteAsync();
+                await _context.UserJobPreferences
+                    .Where(p => p.UserId == id)
+                    .ExecuteDeleteAsync();
 
                 // Profile details
-                await _context.ProfileEducations.Where(e => e.UserId == id).ExecuteDeleteAsync();
-                await _context.ProfileExperiences.Where(e => e.UserId == id).ExecuteDeleteAsync();
+                await _context.ProfileEducations
+                    .Where(e => e.UserId == id)
+                    .ExecuteDeleteAsync();
+                await _context.ProfileExperiences
+                    .Where(e => e.UserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Chat participation rows (not messages — ChatMessage.SenderUserId has ClientSetNull)
-                await _context.ChatUsers.Where(cu => cu.UserId == id).ExecuteDeleteAsync();
+                // Chat: Chat.CreatedByUserId is non-nullable with NO ACTION.
+                // Delete all messages and participant rows for chats this user created,
+                // plus any messages this user sent in other chats.
+                var createdChatIds = _context.Chats
+                    .Where(c => c.CreatedByUserId == id)
+                    .Select(c => c.ChatId);
+                await _context.ChatMessages
+                    .Where(m => m.SenderUserId == id || createdChatIds.Contains(m.ChatId))
+                    .ExecuteDeleteAsync();
+                await _context.ChatUsers
+                    .Where(cu => cu.UserId == id || createdChatIds.Contains(cu.ChatId))
+                    .ExecuteDeleteAsync();
+                await _context.Chats
+                    .Where(c => c.CreatedByUserId == id)
+                    .ExecuteDeleteAsync();
 
-                // Post reactions and comments by this user, then the user's own posts
-                await _context.PostReactions.Where(r => r.UserId == id).ExecuteDeleteAsync();
-                await _context.PostComments.Where(c => c.UserId == id).ExecuteDeleteAsync();
-                await _context.Posts.Where(p => p.UserId == id).ExecuteDeleteAsync();
+                // Nullify Opportunity.CreatorId for opportunities this user created.
+                // CreatorId is nullable; the FK has NO ACTION so the column must be cleared
+                // before the user row is deleted.
+                await _context.Opportunities
+                    .Where(o => o.CreatorId == id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(o => o.CreatorId, (int?)null));
+
+                // Post reactions and comments: remove those by this user AND those on
+                // this user's posts (from other users), then delete the posts themselves.
+                var userPostIds = _context.Posts
+                    .Where(p => p.UserId == id)
+                    .Select(p => p.PostId);
+                await _context.PostReactions
+                    .Where(r => r.UserId == id || userPostIds.Contains(r.PostId))
+                    .ExecuteDeleteAsync();
+                await _context.PostComments
+                    .Where(c => c.UserId == id || userPostIds.Contains(c.PostId))
+                    .ExecuteDeleteAsync();
+                await _context.Posts
+                    .Where(p => p.UserId == id)
+                    .ExecuteDeleteAsync();
 
                 // Audit log entries
-                await _context.AuditLogs.Where(a => a.UserId == id).ExecuteDeleteAsync();
+                await _context.AuditLogs
+                    .Where(a => a.UserId == id)
+                    .ExecuteDeleteAsync();
 
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
