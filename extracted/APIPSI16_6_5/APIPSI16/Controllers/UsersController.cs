@@ -17,11 +17,13 @@ namespace APIPSI16.Controllers
     {
         private readonly xcleratesystemslinks_SampleDBContext _context;
         private readonly IFileStorageService _fileStorage;
+        private readonly ILogger<UsersController> _logger;
 
-        public UsersController(xcleratesystemslinks_SampleDBContext context, IFileStorageService fileStorage)
+        public UsersController(xcleratesystemslinks_SampleDBContext context, IFileStorageService fileStorage, ILogger<UsersController> logger)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         // GET: api/Users
@@ -669,8 +671,63 @@ namespace APIPSI16.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Remove all records that reference this user via non-cascading FKs
+                // before deleting the user to avoid FK constraint violations.
+
+                // Sessions (recently added table without cascade — direct cause of the regression)
+                await _context.Sessions.Where(s => s.UserId == id).ExecuteDeleteAsync();
+
+                // Notifications where user is recipient or actor
+                await _context.Notifications.Where(n => n.UserId == id || n.ActorUserId == id).ExecuteDeleteAsync();
+
+                // Company memberships
+                await _context.CompanyMembers.Where(m => m.UserId == id).ExecuteDeleteAsync();
+
+                // Social connections (user is either requester or addressee)
+                await _context.Connections.Where(c => c.RequesterUserId == id || c.AddresseeUserId == id).ExecuteDeleteAsync();
+
+                // Employer candidate history entries
+                await _context.EmployerCandidateHistories.Where(h => h.UserId == id).ExecuteDeleteAsync();
+
+                // Job applications (child InterviewRounds use nullable FK — safe to leave)
+                await _context.JobApplications.Where(a => a.UserId == id).ExecuteDeleteAsync();
+
+                // Skill endorsements made by this user, then the user's own skills
+                await _context.SkillEndorsements.Where(e => e.EndorserUserId == id).ExecuteDeleteAsync();
+                await _context.UserSkills.Where(s => s.UserId == id).ExecuteDeleteAsync();
+
+                // Job preferences
+                await _context.UserJobPreferences.Where(p => p.UserId == id).ExecuteDeleteAsync();
+
+                // Profile details
+                await _context.ProfileEducations.Where(e => e.UserId == id).ExecuteDeleteAsync();
+                await _context.ProfileExperiences.Where(e => e.UserId == id).ExecuteDeleteAsync();
+
+                // Chat participation rows (not messages — ChatMessage.SenderUserId has ClientSetNull)
+                await _context.ChatUsers.Where(cu => cu.UserId == id).ExecuteDeleteAsync();
+
+                // Post reactions and comments by this user, then the user's own posts
+                await _context.PostReactions.Where(r => r.UserId == id).ExecuteDeleteAsync();
+                await _context.PostComments.Where(c => c.UserId == id).ExecuteDeleteAsync();
+                await _context.Posts.Where(p => p.UserId == id).ExecuteDeleteAsync();
+
+                // Audit log entries
+                await _context.AuditLogs.Where(a => a.UserId == id).ExecuteDeleteAsync();
+
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to delete user {UserId}.", id);
+                return StatusCode(500, "An error occurred while deleting the user. Please try again.");
+            }
 
             return NoContent();
         }
