@@ -1,0 +1,84 @@
+@{
+    ViewData["Title"] = "Dashboard Admin";
+}
+
+<div class="container mt-5">
+    <h1 style="margin-bottom: 2rem;">Dashboard Administrativo</h1>
+
+    <div class="opportunities-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="card">
+            <div class="feature-icon">⭐</div>
+            <h3 style="margin-top: 1rem;">Pedidos de Empregador</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Analisa e aprova pedidos de novas contas de empregador</p>
+            <a href="/Users/EmployerRequests" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;" id="employer-req-btn">Ver Pedidos</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">📋</div>
+            <h3 style="margin-top: 1rem;">Oportunidades</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Gere todas as oportunidades da plataforma</p>
+            <a href="/Opportunities" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Oportunidades</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">📊</div>
+            <h3 style="margin-top: 1rem;">Candidaturas</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Acompanha todas as candidaturas recebidas</p>
+            <a href="/Applications" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Candidaturas</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">🏢</div>
+            <h3 style="margin-top: 1rem;">Empresas</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Gere perfis de empresas</p>
+            <a href="/Companies" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Empresas</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">💬</div>
+            <h3 style="margin-top: 1rem;">Conversas</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Monitora comunicações da plataforma</p>
+            <a href="/Chats" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Conversas</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">👥</div>
+            <h3 style="margin-top: 1rem;">Utilizadores</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Gere contas de utilizadores</p>
+            <a href="/Users" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Utilizadores</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">⚙️</div>
+            <h3 style="margin-top: 1rem;">Configurações</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Configurar sistema e permissões</p>
+            <a href="#" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ir para Configurações</a>
+        </div>
+
+        <div class="card">
+            <div class="feature-icon">💰</div>
+            <h3 style="margin-top: 1rem;">Receita & Lucro</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">Analisa receita estimada por subscrições e projeções de crescimento</p>
+            <a href="/Home/Profit" class="btn-primary" style="display: inline-block; padding: 0.6rem 1rem; text-decoration: none;">Ver Receita</a>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+(function() {
+    function getToken() {
+        var m = document.cookie.split(";").map(function(c){return c.trim();}).find(function(c){return c.startsWith("ApiAccessToken=");});
+        return m ? decodeURIComponent(m.split("=")[1]) : (localStorage.getItem("token")||"");
+    }
+    fetch("/api/users/pending-employers", {
+        headers: { "Authorization": "Bearer " + getToken() }
+    }).then(function(r){ return r.json(); }).then(function(data) {
+        var btn = document.getElementById("employer-req-btn");
+        if (btn && data && data.length > 0) {
+            btn.textContent = "Ver Pedidos (" + data.length + ")";
+            btn.style.background = "#f59e0b";
+        }
+    }).catch(function(){});
+})();
+</script>
+}

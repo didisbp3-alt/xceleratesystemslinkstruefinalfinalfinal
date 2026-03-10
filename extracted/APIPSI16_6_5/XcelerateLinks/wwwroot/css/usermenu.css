@@ -1,0 +1,237 @@
+﻿/* User menu: avatar initials + stacked name/email + dropdown actions */
+
+/* Root container for the user menu */
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--header-text, #111827);
+}
+
+    /* Avatar circle showing initials */
+    .user-menu .avatar {
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0052CC 0%, #00DD55 100%);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+        flex-shrink: 0;
+        user-select: none;
+    }
+
+/* Text stack next to avatar */
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.user-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.user-email {
+    font-size: 0.78rem;
+    color: var(--header-muted, #6b7280);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Make the anchor (toggle) visually clean */
+.user-menu > a.dropdown-toggle {
+    color: inherit;
+}
+
+/* Dropdown menu styling adjustments to match your visual language */
+.dropdown-menu {
+    border-radius: 10px;
+    min-width: 200px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+/* Dropdown item styles */
+.dropdown-item {
+    font-weight: 600;
+    color: #111827;
+}
+
+    .dropdown-item:hover {
+        background-color: rgba(0, 82, 204, 0.06);
+    }
+
+/* Responsive: on very small screens, hide email to save space */
+@media (max-width: 480px) {
+    .user-name {
+        max-width: 110px;
+        font-size: 0.9rem;
+    }
+
+    .user-email {
+        display: none;
+    }
+
+    .user-menu .avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Guest view small adjustments */
+.user-menu.guest a.btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* User pill + dropdown styling */
+
+/* The pill container that highlights user area */
+.user-pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.2rem;
+}
+
+/* Toggle (avatar + text) inside the pill */
+.user-pill-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04); /* subtle pill behind */
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    color: inherit;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+    /* Slight lift on hover */
+    .user-pill-toggle:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.16);
+    }
+
+/* Avatar (image) */
+.user-pill .avatar-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    background: #fff;
+}
+
+/* Initials fallback */
+.user-pill .avatar-initials {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0052CC 0%, #00DD55 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* Text stack next to avatar */
+.user-pill .user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.user-pill .user-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.user-pill .user-email {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Dropdown styling to match the pill */
+.user-pill .dropdown-menu {
+    border-radius: 12px;
+    min-width: 220px;
+    box-shadow: 0 14px 40px rgba(2,6,23,0.08);
+    padding: 0.4rem;
+}
+
+/* Dropdown items */
+.user-pill .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    color: inherit;
+    font-weight: 600;
+}
+
+    .user-pill .dropdown-item:hover {
+        background: rgba(0,82,204,0.06);
+    }
+
+    /* Danger (logout) */
+    .user-pill .dropdown-item.text-danger {
+        color: #dc2626 !important;
+    }
+
+/* Divider: slightly brighter */
+.user-pill .dropdown-divider {
+    margin: 0.35rem 0;
+    border-color: rgba(2,6,23,0.06);
+}
+
+/* Guest small buttons */
+.user-menu.guest a.btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+    .user-pill-toggle {
+        padding: 0.35rem 0.6rem;
+    }
+
+    .user-pill .avatar-img, .user-pill .avatar-initials {
+        width: 36px;
+        height: 36px;
+    }
+
+    .user-pill .user-meta {
+        display: none;
+    }
+    /* hide text on tiny screens */
+}

@@ -1,0 +1,48 @@
+@model IEnumerable<APIPSI16.Models.JobApplication>
+@{
+    ViewData["Title"] = "Candidaturas";
+    var statusLabels = new Dictionary<byte, string>
+    {
+        { 0, "Enviada" }, { 1, "Em análise" }, { 2, "Entrevista" },
+        { 3, "Oferta" }, { 4, "Aceite" }, { 5, "Recusada" }
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Candidaturas</h2>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Oportunidade</th>
+            <th>Utilizador</th>
+            <th>Estado</th>
+            <th>Data</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        var statusLabel = statusLabels.ContainsKey(item.Status) ? statusLabels[item.Status] : item.Status.ToString();
+        <tr>
+            <td>@(item.Name ?? "-")</td>
+            <td>@(item.Opportunity?.Title ?? item.OpportunityId.ToString() ?? "-")</td>
+            <td>@(item.User?.Name ?? item.UserId.ToString() ?? "-")</td>
+            <td><span class="badge bg-secondary">@statusLabel</span></td>
+            <td>@item.AppliedAt.ToString("d MMM yyyy")</td>
+            <td class="text-end">
+                <a asp-action="Details" asp-route-id="@item.JobApplicationId" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                <a asp-action="Delete" asp-route-id="@item.JobApplicationId" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

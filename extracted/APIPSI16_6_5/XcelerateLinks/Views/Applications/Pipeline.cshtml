@@ -1,0 +1,530 @@
+@using System.Security.Claims
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Application Pipeline";
+    var companyId = ViewBag.CompanyId as int? ?? 0;
+    var opportunityId = ViewBag.OpportunityId as int?;
+    var applications = ViewBag.Applications as List<APIPSI16.Models.JobApplication> ?? new List<APIPSI16.Models.JobApplication>();
+    var opportunities = ViewBag.Opportunities as IEnumerable<APIPSI16.Models.Opportunity> ?? Array.Empty<APIPSI16.Models.Opportunity>();
+    var isAdmin = User.FindFirst(ClaimTypes.Role)?.Value == "0";
+    var isEmployer = User.FindFirst(ClaimTypes.Role)?.Value == "2";
+    var canManage = isAdmin || isEmployer;
+
+    var stages = new (byte stage, string name, string color, string icon)[]
+    {
+        (0, "Submitted",  "#6b7280", "📥"),
+        (1, "Screening",  "#0052CC", "🔍"),
+        (2, "Interview",  "#7c3aed", "🗣️"),
+        (3, "Offer",      "#059669", "📋"),
+        (4, "Hired",      "#10b981", "✅"),
+        (5, "Rejected",   "#ef4444", "❌")
+    };
+
+    // Build unique applicants from applications (deduplicate by UserId)
+    var applicantMap = applications
+        .GroupBy(a => a.UserId)
+        .Select(g => new {
+            App   = g.OrderByDescending(a => a.AppliedAt).First(),
+            Roles = string.Join(", ", g.Select(a => a.Opportunity?.Title ?? $"Opportunity #{a.OpportunityId}").Distinct())
+        })
+        .OrderBy(x => x.App.User?.Name ?? "")
+        .ToList();
+
+    // Collect unique skills across all applicants
+    var allSkillNames = applications
+        .SelectMany(a => a.User?.UserSkills?.Select(us => us.Skill?.Name ?? "") ?? Enumerable.Empty<string>())
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Distinct()
+        .OrderBy(s => s)
+        .ToList();
+
+    // Build returnUrl for profile links
+    var currentUrl = $"/Applications/Pipeline?companyId={companyId}" +
+                     (opportunityId.HasValue ? $"&opportunityId={opportunityId}" : "");
+
+    // Serialise apps to JS so the AJAX move works client-side
+    var appsJson = JsonSerializer.Serialize(applications.Select(a => new {
+        id       = a.JobApplicationId,
+        userId   = a.UserId,
+        name     = a.User?.Name ?? a.Name ?? $"Applicant #{a.UserId}",
+        opp      = a.Opportunity?.Title ?? $"Opportunity #{a.OpportunityId}",
+        status   = (int)a.Status,
+        applied  = a.AppliedAt.ToString("dd MMM yyyy"),
+        location = a.User?.Location ?? "",
+        exp      = a.YearsOfExperience,
+        skills   = a.User?.UserSkills?.Select(us => us.Skill?.Name ?? "").Where(s => s != "").ToList() ?? new List<string>()
+    }));
+}
+
+<style>
+    /* ── Pipeline board ─────────────────────────────────── */
+    .pipeline-page { max-width: 1400px; margin: 0 auto; }
+    .pipeline-board { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 1rem; }
+    .pipeline-column { min-width: 230px; flex-shrink: 0; border-radius: 12px;
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+    .pipeline-col-header { padding: 0.7rem 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex-wrap: wrap; }
+    .pipeline-col-label { font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.04em; display: flex; align-items: center; gap: 0.3rem; }
+    .pipeline-col-count { background: rgba(255,255,255,0.1); border-radius: 20px;
+        padding: 0.1rem 0.5rem; font-size: 0.72rem; min-width: 1.4rem; text-align: center; }
+    .col-search { width: 100%; padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+        color: inherit; outline: none; margin-top: 0.35rem; }
+    .col-search:focus { border-color: rgba(79,142,247,0.5); background: rgba(255,255,255,0.07); }
+    .pipeline-cards { padding: 0.5rem; display: flex; flex-direction: column;
+        gap: 0.45rem; min-height: 60px; }
+
+    /* ── Application card ───────────────────────────────── */
+    .pipeline-app-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 9px; padding: 0.7rem 0.85rem; transition: border-color .15s; }
+    .pipeline-app-card:hover { border-color: rgba(0,82,204,0.35); }
+    .pipeline-app-card.hidden { display: none; }
+    .pac-name { font-size: 0.87rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .pac-name:hover { color: #4f8ef7; }
+    .pac-opp { font-size: 0.74rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.1rem; }
+    .pac-date { font-size: 0.7rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.25rem; }
+    .pac-actions { margin-top: 0.5rem; display: flex; gap: 0.25rem; flex-wrap: wrap; }
+    .pac-btn { font-size: 0.68rem; border: 1px solid rgba(255,255,255,0.12);
+        background: transparent; color: inherit; border-radius: 5px;
+        padding: 0.15rem 0.4rem; cursor: pointer; transition: background .12s; }
+    .pac-btn:hover { background: rgba(255,255,255,0.08); }
+    .pac-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pac-moving { opacity: 0.5; pointer-events: none; }
+
+    /* ── Applicants section ─────────────────────────────── */
+    .applicants-section { margin-top: 2.5rem; }
+    .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.5rem; }
+    .filter-bar { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 0.2rem; }
+    .filter-label { font-size: 0.72rem; color: var(--dark-text-muted,#a8b2c1); font-weight: 600; }
+    .filter-input { padding: 0.4rem 0.6rem; font-size: 0.8rem; border-radius: 7px;
+        border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+        color: inherit; outline: none; min-width: 140px; }
+    .filter-input:focus { border-color: rgba(79,142,247,0.5); background: rgba(255,255,255,0.07); }
+    .filter-btn { padding: 0.4rem 0.85rem; font-size: 0.78rem; border-radius: 7px;
+        border: 1px solid rgba(255,255,255,0.15); background: transparent; color: inherit; cursor: pointer; }
+    .filter-btn:hover { background: rgba(255,255,255,0.07); }
+    .filter-btn.active { background: #0052CC; border-color: #0052CC; color: #fff; }
+
+    /* ── Applicant table ─────────────────────────────────── */
+    .applicants-grid { display: grid;
+        grid-template-columns: 1fr minmax(80px,160px) minmax(60px,100px) 1fr 120px;
+        gap: 0; border-radius: 10px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.07); }
+    .ag-header { display: contents; }
+    .ag-header > div { padding: 0.55rem 0.9rem; background: rgba(255,255,255,0.05);
+        font-size: 0.73rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--dark-text-muted,#a8b2c1); }
+    .ag-row { display: contents; }
+    .ag-row > div { padding: 0.6rem 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.82rem; display: flex; align-items: center; background: transparent;
+        transition: background .12s; }
+    .ag-row:hover > div { background: rgba(255,255,255,0.025); }
+    .ag-row.hidden { display: none; }
+    .applicant-name-link { font-weight: 600; color: inherit; text-decoration: none; }
+    .applicant-name-link:hover { color: #4f8ef7; }
+    .skill-tag { background: rgba(0,82,204,0.12); border: 1px solid rgba(0,82,204,0.3);
+        color: #4f8ef7; border-radius: 12px; padding: 0.1rem 0.5rem;
+        font-size: 0.68rem; margin: 0.1rem; display: inline-block; }
+    .no-results { grid-column: 1 / -1; padding: 1.5rem; text-align: center;
+        color: var(--dark-text-muted,#a8b2c1); display: none; }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast-msg { padding: 0.65rem 1.1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.35); animation: toastIn .25s ease both; }
+    .toast-msg.success { background: #059669; color: #fff; }
+    .toast-msg.error   { background: #ef4444; color: #fff; }
+    @@keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+</style>
+
+<div class="container py-4">
+    <div class="pipeline-page">
+        <!-- ── Header ── -->
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+            <a asp-action="Manage" asp-controller="Companies" asp-route-id="@companyId"
+               class="btn btn-sm btn-outline-secondary">← Company</a>
+            <h2 class="mb-0">Application Pipeline</h2>
+            <span class="badge bg-secondary">@applications.Count application(s)</span>
+
+            @if (opportunities.Any())
+            {
+                <form method="get" action="" class="d-flex align-items-center gap-2 ms-auto">
+                    <input type="hidden" name="companyId" value="@companyId" />
+                    <select name="opportunityId" class="filter-input" onchange="this.form.submit()"
+                            style="min-width:180px;">
+                        <option value="">All Opportunities</option>
+                        @foreach (var opp in opportunities)
+                        {
+                            if (opportunityId == opp.Id)
+                            {
+                                <option value="@opp.Id" selected="selected">@opp.Title</option>
+                            }
+                            else
+                            {
+                                <option value="@opp.Id">@opp.Title</option>
+                            }
+                        }
+                    </select>
+                </form>
+            }
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-warning mb-3">⚠️ @ViewBag.Error</div>
+        }
+
+        <!-- ── Antiforgery token (used by AJAX) ── -->
+        @Html.AntiForgeryToken()
+
+        @if (!applications.Any())
+        {
+            <div style="text-align:center;padding:3rem;color:var(--dark-text-muted,#a8b2c1);">
+                <p>No applications yet for this company.</p>
+            </div>
+        }
+        else
+        {
+            <!-- ── Kanban board ── -->
+            <div class="pipeline-board" id="pipelineBoard">
+                @foreach (var (stage, stageName, stageColor, stageIcon) in stages)
+                {
+                    var stageApps = applications.Where(a => a.Status == stage).ToList();
+                    <div class="pipeline-column" data-stage="@stage">
+                        <div class="pipeline-col-header">
+                            <span class="pipeline-col-label" style="color:@stageColor">
+                                @stageIcon @stageName
+                            </span>
+                            <span class="pipeline-col-count" id="count-@stage">@stageApps.Count</span>
+                            <input type="text" class="col-search" placeholder="Filter by name…"
+                                   oninput="filterColumn(this, @stage)"
+                                   aria-label="Filter @stageName column" />
+                        </div>
+                        <div class="pipeline-cards" id="col-@stage">
+                            @foreach (var app in stageApps)
+                            {
+                                var profileUrl = $"/Users/Details/{app.UserId}?returnUrl={Uri.EscapeDataString(currentUrl)}";
+                                <div class="pipeline-app-card"
+                                     id="card-@app.JobApplicationId"
+                                     data-name="@((app.User?.Name ?? app.Name ?? "").ToLower())"
+                                     data-appid="@app.JobApplicationId"
+                                     data-status="@stage">
+                                    <a href="@profileUrl" class="pac-name">
+                                        @(app.User?.Name ?? app.Name ?? $"Applicant #{app.UserId}")
+                                    </a>
+                                    <div class="pac-opp">@(app.Opportunity?.Title ?? $"Opportunity #{app.OpportunityId}")</div>
+                                    <div class="pac-date">@app.AppliedAt.ToString("dd MMM yyyy")</div>
+
+                                    @if (canManage)
+                                    {
+                                        <div class="pac-actions">
+                                            @foreach (var (s, sn, sc, si) in stages)
+                                            {
+                                                if (s != stage)
+                                                {
+                                                    <button class="pac-btn"
+                                                            onclick="moveCard(@app.JobApplicationId, @s, this)"
+                                                            title="Move to @sn">
+                                                        @si @sn
+                                                    </button>
+                                                }
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- ── Applicants list ── -->
+            <div class="applicants-section">
+                <div class="section-title">
+                    👥 Applicants
+                    <span class="badge bg-secondary ms-1" id="applicantCountBadge">@applicantMap.Count</span>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <span class="filter-label">Name</span>
+                        <input type="text" id="filterName" class="filter-input" placeholder="Search name…" oninput="filterApplicants()" />
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Location</span>
+                        <input type="text" id="filterLocation" class="filter-input" placeholder="City or region…" oninput="filterApplicants()" />
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Min. Experience (yrs)</span>
+                        <input type="number" id="filterExpMin" class="filter-input" placeholder="0" min="0" style="max-width:90px;" oninput="filterApplicants()" />
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Max. Experience (yrs)</span>
+                        <input type="number" id="filterExpMax" class="filter-input" placeholder="∞" min="0" style="max-width:90px;" oninput="filterApplicants()" />
+                    </div>
+                    @if (allSkillNames.Any())
+                    {
+                        <div class="filter-group">
+                            <span class="filter-label">Skill</span>
+                            <select id="filterSkill" class="filter-input" onchange="filterApplicants()">
+                                <option value="">All skills</option>
+                                @foreach (var skill in allSkillNames)
+                                {
+                                    <option value="@skill.ToLower()">@skill</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    <div class="filter-group">
+                        <span class="filter-label">Stage</span>
+                        <select id="filterStage" class="filter-input" onchange="filterApplicants()">
+                            <option value="-1">All stages</option>
+                            @foreach (var (s, sn, sc, si) in stages)
+                            {
+                                <option value="@s">@si @sn</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="filter-group" style="justify-content:flex-end;">
+                        <span class="filter-label">&nbsp;</span>
+                        <button class="filter-btn" onclick="clearFilters()">Clear filters</button>
+                    </div>
+                </div>
+
+                <!-- Applicants grid -->
+                <div class="applicants-grid" id="applicantsGrid">
+                    <div class="ag-header">
+                        <div>Applicant</div>
+                        <div>Location</div>
+                        <div>Exp.</div>
+                        <div>Skills</div>
+                        <div>Current Stage</div>
+                    </div>
+                    @foreach (var item in applicantMap)
+                    {
+                        var app = item.App;
+                        var userName = app.User?.Name ?? app.Name ?? $"Applicant #{app.UserId}";
+                        var userLocation = app.User?.Location ?? "";
+                        var skills = app.User?.UserSkills?.Select(us => us.Skill?.Name ?? "").Where(s => s != "").ToList() ?? new List<string>();
+                        var skillsStr = string.Join(",", skills.Select(s => s.ToLower()));
+                        var profileUrl = $"/Users/Details/{app.UserId}?returnUrl={Uri.EscapeDataString(currentUrl)}";
+                        var (_, stageName, stageColor, stageIcon) = stages.First(x => x.stage == app.Status);
+                        <div class="ag-row"
+                             data-name="@userName.ToLower()"
+                             data-location="@userLocation.ToLower()"
+                             data-exp="@(app.YearsOfExperience ?? 0)"
+                             data-skills="@skillsStr"
+                             data-stage="@((int)app.Status)"
+                             id="ar-@app.UserId">
+                            <div>
+                                <a href="@profileUrl" class="applicant-name-link">@userName</a>
+                                @if (!string.IsNullOrEmpty(item.Roles))
+                                {
+                                    <div style="font-size:0.7rem;color:var(--dark-text-muted,#a8b2c1);margin-top:0.1rem;">@item.Roles</div>
+                                }
+                            </div>
+                            <div>@(string.IsNullOrEmpty(userLocation) ? "—" : userLocation)</div>
+                            <div>@(app.YearsOfExperience.HasValue ? $"{app.YearsOfExperience} yr{(app.YearsOfExperience == 1 ? "" : "s")}" : "—")</div>
+                            <div style="flex-wrap:wrap;">
+                                @if (skills.Any())
+                                {
+                                    @foreach (var skill in skills.Take(6))
+                                    {
+                                        <span class="skill-tag">@skill</span>
+                                    }
+                                    @if (skills.Count > 6)
+                                    {
+                                        <span class="skill-tag">+@(skills.Count - 6)</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="color:var(--dark-text-muted,#a8b2c1);font-size:0.75rem;">—</span>
+                                }
+                            </div>
+                            <div>
+                                <span style="color:@stageColor;font-size:0.78rem;font-weight:600;">@stageIcon @stageName</span>
+                            </div>
+                        </div>
+                    }
+                    <div class="no-results" id="noApplicantsMsg">No applicants match your filters.</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+@section Scripts {
+<script>
+// ── App data ────────────────────────────────────────────
+const APPS = @Html.Raw(appsJson);
+const COMPANY_ID = @companyId;
+const CSRF_TOKEN = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+const STAGE_NAMES = {
+    0: "📥 Submitted",
+    1: "🔍 Screening",
+    2: "🗣️ Interview",
+    3: "📋 Offer",
+    4: "✅ Hired",
+    5: "❌ Rejected"
+};
+const STAGE_COLORS = {
+    0: "#6b7280", 1: "#0052CC", 2: "#7c3aed",
+    3: "#059669", 4: "#10b981", 5: "#ef4444"
+};
+
+// ── Toast ───────────────────────────────────────────────
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `toast-msg ${type}`;
+    t.textContent = msg;
+    document.getElementById('toastContainer').appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); }, 3500);
+}
+
+// ── Move card via AJAX ──────────────────────────────────
+async function moveCard(appId, newStatus, btn) {
+    const card = document.getElementById('card-' + appId);
+    if (!card) return;
+    card.classList.add('pac-moving');
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/Applications/UpdateStatusAjax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `id=${appId}&newStatus=${newStatus}&companyId=${COMPANY_ID}&__RequestVerificationToken=${encodeURIComponent(CSRF_TOKEN)}`
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+            showToast(data.error || 'Failed to update status.', 'error');
+            card.classList.remove('pac-moving');
+            btn.disabled = false;
+            return;
+        }
+
+        // Move card to new column
+        const oldStatus = parseInt(card.dataset.status);
+        const newCol = document.getElementById('col-' + newStatus);
+        card.dataset.status = newStatus;
+
+        // Rebuild action buttons for new stage
+        const actionsDiv = card.querySelector('.pac-actions');
+        if (actionsDiv) {
+            actionsDiv.innerHTML = '';
+            for (const [s, label] of Object.entries(STAGE_NAMES)) {
+                if (parseInt(s) !== newStatus) {
+                    const b = document.createElement('button');
+                    b.className = 'pac-btn';
+                    b.title = 'Move to ' + label;
+                    b.textContent = label;
+                    b.setAttribute('onclick', `moveCard(${appId}, ${s}, this)`);
+                    actionsDiv.appendChild(b);
+                }
+            }
+        }
+
+        card.classList.remove('pac-moving');
+        newCol.appendChild(card);
+
+        // Update column counts
+        updateCount(oldStatus);
+        updateCount(newStatus);
+
+        // Update applicants grid stage badge
+        const appData = APPS.find(a => a.id === appId);
+        if (appData) {
+            appData.status = newStatus;
+            // Update ag-row stage cell
+            const row = document.getElementById('ar-' + appData.userId);
+            if (row) {
+                row.dataset.stage = newStatus;
+                const stageCell = row.querySelector('div:last-child');
+                if (stageCell) {
+                    const color = STAGE_COLORS[newStatus] || '#6b7280';
+                    stageCell.innerHTML = `<span style="color:${color};font-size:0.78rem;font-weight:600;">${STAGE_NAMES[newStatus]}</span>`;
+                }
+            }
+        }
+
+        showToast('Application moved to ' + STAGE_NAMES[newStatus], 'success');
+    } catch (e) {
+        showToast('Network error. Please try again.', 'error');
+        card.classList.remove('pac-moving');
+        btn.disabled = false;
+    }
+}
+
+function updateCount(stage) {
+    const col = document.getElementById('col-' + stage);
+    const badge = document.getElementById('count-' + stage);
+    if (col && badge) {
+        const visible = col.querySelectorAll('.pipeline-app-card:not(.hidden)').length;
+        badge.textContent = visible;
+    }
+}
+
+// ── Per-column name filter ──────────────────────────────
+function filterColumn(input, stage) {
+    const q = input.value.trim().toLowerCase();
+    const col = document.getElementById('col-' + stage);
+    let visible = 0;
+    col.querySelectorAll('.pipeline-app-card').forEach(card => {
+        const name = card.dataset.name || '';
+        const show = q === '' || name.includes(q);
+        card.classList.toggle('hidden', !show);
+        if (show) visible++;
+    });
+    document.getElementById('count-' + stage).textContent = visible;
+}
+
+// ── Applicants list filter ──────────────────────────────
+function filterApplicants() {
+    const name    = (document.getElementById('filterName')?.value || '').trim().toLowerCase();
+    const loc     = (document.getElementById('filterLocation')?.value || '').trim().toLowerCase();
+    const expMin  = parseFloat(document.getElementById('filterExpMin')?.value) || 0;
+    const expMax  = parseFloat(document.getElementById('filterExpMax')?.value) || Infinity;
+    const skill   = (document.getElementById('filterSkill')?.value || '').trim().toLowerCase();
+    const stage   = parseInt(document.getElementById('filterStage')?.value ?? '-1');
+
+    let visibleCount = 0;
+    document.querySelectorAll('#applicantsGrid .ag-row').forEach(row => {
+        const rName  = row.dataset.name   || '';
+        const rLoc   = row.dataset.location || '';
+        const rExp   = parseFloat(row.dataset.exp) || 0;
+        const rSkill = row.dataset.skills || '';
+        const rStage = parseInt(row.dataset.stage ?? '-1');
+
+        const ok = (name  === '' || rName.includes(name))
+                && (loc   === '' || rLoc.includes(loc))
+                && (rExp  >= expMin && rExp <= expMax)
+                && (skill === '' || rSkill.split(',').some(s => s === skill))
+                && (stage === -1  || rStage === stage);
+
+        row.classList.toggle('hidden', !ok);
+        if (ok) visibleCount++;
+    });
+
+    document.getElementById('applicantCountBadge').textContent = visibleCount;
+    const noMsg = document.getElementById('noApplicantsMsg');
+    if (noMsg) noMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function clearFilters() {
+    ['filterName','filterLocation','filterExpMin','filterExpMax','filterSkill','filterStage']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = el.tagName === 'SELECT' ? (id === 'filterStage' ? '-1' : '') : ''; });
+    filterApplicants();
+}
+</script>
+}

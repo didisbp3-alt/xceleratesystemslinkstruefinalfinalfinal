@@ -1,0 +1,705 @@
+@{
+    ViewData["Title"] = "Mensagens";
+    var currentUserId = ViewBag.CurrentUserId?.ToString() ?? "";
+    var initialChatId = ViewBag.InitialChatId?.ToString() ?? "null";
+}
+
+<style>
+    /* Theme variables for light & dark mode */
+    .messages-page[data-theme="light"] {
+        --bg-main: #f5f8fb;
+        --bg-card: #fff;
+        --bg-sidebar: #f3f6fa;
+        --bg-input: #fff;
+        --bg-highlight: #eaf3ff;
+        --border: #e0e6ed;
+        --primary: #0052CC;
+        --primary-hover: #0040A0;
+        --text-main: #222;
+        --text-muted: #777;
+        --text-invert: #fff;
+    }
+
+    .messages-page[data-theme="dark"] {
+        --bg-main: #0a0e27;
+        --bg-card: rgba(255,255,255,0.02);
+        --bg-sidebar: rgba(255,255,255,0.02);
+        --bg-input: rgba(255,255,255,0.06);
+        --bg-highlight: rgba(255,255,255,0.05);
+        --border: rgba(255,255,255,0.08);
+        --primary: #0052CC;
+        --primary-hover: #0040A0;
+        --text-main: #ececec;
+        --text-muted: #a8b2c1;
+        --text-invert: #fff;
+    }
+
+    /* Full-page messaging layout */
+    .messages-page {
+        display: flex;
+        height: calc(100vh - 70px);
+        overflow: hidden;
+        background: var(--bg-main);
+        color: var(--text-main);
+        transition: background .2s, color .2s;
+    }
+    /* Sidebar */
+    .msg-sidebar {
+        width: 320px;
+        flex-shrink: 0;
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-sidebar);
+    }
+
+    .msg-sidebar-header {
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--bg-card);
+    }
+
+        .msg-sidebar-header h4 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+    .new-chat-btn {
+        background: rgba(0,82,204,0.07);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        border-radius: 8px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background .2s,color .2s;
+    }
+
+    .msg-search {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-sidebar);
+    }
+
+        .msg-search input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.45rem 1rem;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            outline: none;
+            transition: background .2s, color .2s, border .2s;
+        }
+
+            .msg-search input:focus {
+                border-color: var(--primary);
+            }
+
+    .conv-list {
+        flex: 1;
+        overflow-y: auto;
+        background: var(--bg-sidebar);
+    }
+
+    .conv-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.85rem 1.2rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.15s;
+        align-items: center;
+        background: var(--bg-sidebar);
+        color: var(--text-main);
+    }
+
+        .conv-item:hover, .conv-item.active {
+            background: var(--bg-highlight);
+        }
+
+        .conv-item.active {
+            border-left: 3px solid var(--primary);
+        }
+
+    .conv-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-invert);
+        position: relative;
+    }
+
+        .conv-avatar img {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+    .unread-dot {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--primary);
+        border: 2px solid var(--bg-main);
+    }
+
+    .conv-meta {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .conv-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-main);
+    }
+
+    .conv-last {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .conv-badge {
+        background: var(--primary);
+        color: var(--text-invert);
+        border-radius: 10px;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.72rem;
+        flex-shrink: 0;
+    }
+    /* Chat window */
+    .msg-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--bg-main);
+    }
+
+    .msg-chat-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-card);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+        .msg-chat-header h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .msg-chat-header small {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+    .msg-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        gap: 1rem;
+        background: var(--bg-main);
+    }
+
+    .msg-empty-icon {
+        font-size: 3.5rem;
+        opacity: 0.4;
+        color: var(--text-muted);
+    }
+
+    .msg-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+        background: var(--bg-main);
+    }
+
+    .msg-bubble-wrap {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        max-width: 75%;
+    }
+
+        .msg-bubble-wrap.own {
+            flex-direction: row-reverse;
+            align-self: flex-end;
+        }
+
+    .msg-avatar-sm {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-invert);
+    }
+
+    .msg-bubble-inner {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .msg-bubble-wrap.own .msg-bubble-inner {
+        align-items: flex-end;
+    }
+
+    .msg-bubble {
+        padding: 0.65rem 0.9rem;
+        border-radius: 16px;
+        font-size: 0.88rem;
+        line-height: 1.45;
+        word-break: break-word;
+        max-width: 100%;
+    }
+
+        .msg-bubble.other {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-bubble.own {
+            background: var(--primary);
+            color: var(--text-invert);
+            border-bottom-right-radius: 4px;
+        }
+
+    .msg-time {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+        text-align: right;
+    }
+
+    .msg-sender-name {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-bottom: 0.2rem;
+    }
+
+    .typing-bar {
+        padding: 0.3rem 1.5rem;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        min-height: 24px;
+        background: var(--bg-main);
+    }
+
+    .msg-composer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--border);
+        background: var(--bg-card);
+    }
+
+    .msg-input-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .msg-input {
+        flex: 1;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 0.6rem 1rem;
+        color: var(--text-main);
+        font-size: 0.9rem;
+        resize: none;
+        outline: none;
+        max-height: 120px;
+        overflow-y: auto;
+        font-family: inherit;
+    }
+
+        .msg-input:focus {
+            border-color: var(--primary);
+        }
+
+    .msg-send-btn {
+        background: var(--primary);
+        color: var(--text-invert);
+        border: none;
+        border-radius: 50%;
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s;
+        flex-shrink: 0;
+    }
+
+        .msg-send-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .msg-send-btn:disabled {
+            background: rgba(0,82,204,0.3);
+            cursor: default;
+        }
+    @@media (max-width: 768px) {
+        .msg-sidebar
+
+    {
+        width: 240px;
+    }
+
+    .messages-page {
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 70px);
+    }
+
+    }</style>
+
+<!-- The chat container. Theme is set by JS to match body class -->
+<div id="messages-app" class="messages-page"></div>
+
+@section Scripts {
+    <script>
+        // ---- AUTO THEME SYNC ----
+        function syncMessagesTheme() {
+            var body = document.body;
+            var chatDiv = document.getElementById('messages-app');
+            if (!chatDiv) return;
+            if (body.classList.contains('light-theme')) {
+                chatDiv.setAttribute('data-theme', 'light');
+            } else {
+                chatDiv.setAttribute('data-theme', 'dark');
+            }
+        }
+        syncMessagesTheme();
+        const observer = new MutationObserver(syncMessagesTheme);
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        window.addEventListener('storage', syncMessagesTheme);
+
+        // ---- React chat code ----
+        const { useState, useEffect, useRef, useCallback } = React;
+        const CURRENT_USER_ID = @Html.Raw(string.IsNullOrEmpty(currentUserId) ? "null" : currentUserId);
+        const INITIAL_CHAT_ID = @Html.Raw(initialChatId);
+
+        function getToken() {
+            const cookieMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ApiAccessToken='));
+            return cookieMatch ? decodeURIComponent(cookieMatch.split('=')[1]) : (localStorage.getItem('token') || '');
+        }
+        function authFetch(url, opts = {}) {
+            return fetch(url, {
+                ...opts,
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken(), ...(opts.headers || {}) }
+            });
+        }
+        function initials(name) {
+            if (!name) return '?';
+            const parts = name.trim().split(/\s+/);
+            return parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        function Avatar({ name, url, size = 44 }) {
+            if (url) return React.createElement('img', { src: url, alt: name, style: { width: size, height: size, borderRadius: '50%', objectFit: 'cover' } });
+            return React.createElement('span', {
+                className: 'conv-avatar',
+                style: { width: size, height: size, fontSize: size * 0.38, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }
+            }, initials(name));
+        }
+        function ConvItem({ conv, active, onClick }) {
+            return React.createElement('div', {
+                className: 'conv-item' + (active ? ' active' : ''),
+                onClick
+            },
+                React.createElement('div', { className: 'conv-avatar', style: { position: 'relative' } },
+                    initials(conv.chatName),
+                    conv.unreadCount > 0 && React.createElement('span', { className: 'unread-dot' })
+                ),
+                React.createElement('div', { className: 'conv-meta' },
+                    React.createElement('div', { className: 'conv-name' }, conv.chatName || 'Chat'),
+                    React.createElement('div', { className: 'conv-last' }, conv.lastMessage?.messageText || 'Sem mensagens')
+                ),
+                conv.unreadCount > 0 && React.createElement('span', { className: 'conv-badge' }, conv.unreadCount)
+            );
+        }
+        function MessageBubble({ msg, isOwn }) {
+            const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '';
+            return React.createElement('div', { className: 'msg-bubble-wrap ' + (isOwn ? 'own' : ''), 'data-message-id': msg.messageId },
+                !isOwn && React.createElement('div', { className: 'msg-avatar-sm' }, initials(msg.senderName)),
+                React.createElement('div', { className: 'msg-bubble-inner' },
+                    !isOwn && React.createElement('div', { className: 'msg-sender-name' }, msg.senderName || 'Utilizador'),
+                    React.createElement('div', { className: 'msg-bubble ' + (isOwn ? 'own' : 'other') }, msg.messageText),
+                    React.createElement('div', { className: 'msg-time' }, time)
+                )
+            );
+        }
+        function MessagesApp() {
+            const [conversations, setConversations] = useState([]);
+            const [activeChatId, setActiveChatId] = useState(INITIAL_CHAT_ID);
+            const [activeChat, setActiveChat] = useState(null);
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [typingUser, setTypingUser] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [connected, setConnected] = useState(false);
+            const [participantOnline, setParticipantOnline] = useState(false);
+            const [onlineUsers, setOnlineUsers] = useState({});
+
+            const connectionRef = useRef(null);
+            const messagesEndRef = useRef(null);
+            const typingTimerRef = useRef(null);
+
+            // Load conversations
+            const loadConversations = useCallback(async () => {
+                try {
+                    const r = await authFetch('/api/chat/conversations');
+                    if (r.ok) setConversations(await r.json());
+                } catch (e) { console.warn('loadConversations error', e); }
+            }, []);
+            // Load messages for active chat
+            const loadMessages = useCallback(async (chatId) => {
+                if (!chatId) return;
+                try {
+                    const r = await authFetch(`/api/chat/${chatId}/messages?page=1&pageSize=100`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        setMessages([...data].reverse());
+                    }
+                } catch (e) { console.warn('loadMessages error', e); }
+            }, []);
+
+            useEffect(() => {
+                const conn = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/chat', { accessTokenFactory: getToken })
+                    .withAutomaticReconnect()
+                    .build();
+                conn.on('ReceiveMessage', (msg) => {
+                    if (msg.chatId === activeChatRef.current) {
+                        setMessages(prev => [...prev, msg]);
+                    }
+                    loadConversations();
+                });
+                conn.on('UserTyping', (data) => {
+                    if (data.isTyping) {
+                        setTypingUser(data.userName);
+                        clearTimeout(typingTimerRef.current);
+                        typingTimerRef.current = setTimeout(() => setTypingUser(null), 3000);
+                    } else {
+                        setTypingUser(null);
+                    }
+                });
+                conn.on('UserOnline', (data) => {
+                    setOnlineUsers(prev => ({ ...prev, [data.userId]: data.isOnline }));
+                });
+                conn.on('ParticipantPresence', (statuses) => {
+                    const map = {};
+                    statuses.forEach(s => { map[s.userId] = s.isOnline; });
+                    setOnlineUsers(prev => ({ ...prev, ...map }));
+                });
+
+                conn.start()
+                    .then(() => { setConnected(true); connectionRef.current = conn; })
+                    .catch(e => console.warn('SignalR start error', e));
+                return () => conn.stop();
+            }, []);
+
+            // keep activeChatId in a ref for the SignalR closure
+            const activeChatRef = useRef(activeChatId);
+            useEffect(() => { activeChatRef.current = activeChatId; }, [activeChatId]);
+            useEffect(() => { loadConversations(); }, [loadConversations]);
+            useEffect(() => {
+                if (!activeChatId) return;
+                loadMessages(activeChatId);
+                const conn = connectionRef.current;
+                if (conn?.state === signalR.HubConnectionState.Connected) {
+                    conn.invoke('JoinChat', activeChatId).catch(e => console.warn(e));
+                }
+                const found = conversations.find(c => c.chatId === activeChatId);
+                if (found) setActiveChat(found);
+            }, [activeChatId, loadMessages]);
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+
+            function openChat(chatId, chat) {
+                setActiveChatId(chatId);
+                setActiveChat(chat);
+                setMessages([]);
+                const conn = connectionRef.current;
+                if (conn?.state === signalR.HubConnectionState.Connected) {
+                    conn.invoke('JoinChat', chatId).catch(e => console.warn(e));
+                }
+                loadMessages(chatId);
+                authFetch(`/api/chat/${chatId}/messages/read-all`, { method: 'PUT' })
+                    .then(() => loadConversations())
+                    .catch(() => {});
+            }
+            async function sendMessage(e) {
+                e.preventDefault();
+                const text = input.trim();
+                if (!text || !activeChatId) return;
+                const conn = connectionRef.current;
+                if (!conn || conn.state !== signalR.HubConnectionState.Connected) {
+                    try {
+                        await authFetch(`/api/chat/${activeChatId}/messages`, {
+                            method: 'POST',
+                            body: JSON.stringify({ messageText: text })
+                        });
+                        setInput('');
+                        loadMessages(activeChatId);
+                    } catch (err) { console.error(err); }
+                    return;
+                }
+                try {
+                    await conn.invoke('SendMessage', activeChatId, text);
+                    setInput('');
+                } catch (err) { console.error('SendMessage error', err); }
+            }
+            function handleInputChange(e) {
+                setInput(e.target.value);
+                const conn = connectionRef.current;
+                if (activeChatId && conn?.state === signalR.HubConnectionState.Connected) {
+                    conn.invoke('TypingIndicator', activeChatId, true).catch(() => {});
+                    clearTimeout(typingTimerRef.current);
+                    typingTimerRef.current = setTimeout(() => {
+                        conn.invoke('TypingIndicator', activeChatId, false).catch(() => {});
+                    }, 1500);
+                }
+            }
+            function handleKeyDown(e) {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
+            }
+            const filteredConvs = searchTerm
+                ? conversations.filter(c => (c.chatName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                : conversations;
+
+            // ---- Render ----
+            return React.createElement('div', { style: { display: 'flex', flex: 1, overflow: 'hidden', width: '100%' } },
+                // Sidebar
+                React.createElement('div', { className: 'msg-sidebar' },
+                    React.createElement('div', { className: 'msg-sidebar-header' },
+                        React.createElement('h4', null, '💬 Mensagens'),
+                        React.createElement('a', { href: '/Chats/Create', className: 'new-chat-btn' }, '+ Nova')
+                    ),
+                    React.createElement('div', { className: 'msg-search' },
+                        React.createElement('input', {
+                            type: 'text', placeholder: 'Pesquisar conversas...',
+                            value: searchTerm, onChange: e => setSearchTerm(e.target.value)
+                        })
+                    ),
+                    React.createElement('div', { className: 'conv-list' },
+                        filteredConvs.length === 0
+                            ? React.createElement('div', { style: { textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' } }, 'Sem conversas')
+                            : filteredConvs.map(conv =>
+                                React.createElement(ConvItem, {
+                                    key: conv.chatId, conv, active: conv.chatId === activeChatId,
+                                    onClick: () => openChat(conv.chatId, conv)
+                                })
+                            )
+                    )
+                ),
+                // Chat window
+                React.createElement('div', { className: 'msg-chat' },
+                    activeChatId
+                        ? React.createElement(React.Fragment, null,
+                            // Header
+                            React.createElement('div', { className: 'msg-chat-header' },
+                                React.createElement('div', { className: 'conv-avatar', style: { width: 36, height: 36, fontSize: '0.9rem' } }, initials(activeChat?.chatName || 'Chat')),
+                                React.createElement('div', null,
+                                    React.createElement('h5', null, activeChat?.chatName || 'Chat'),
+                                    React.createElement('small', null, (() => {
+                                        if (!connected) return '⚪ A conectar...';
+                                        const chatParticipants = activeChat?.participants;
+                                        if (chatParticipants) {
+                                            const anyOnline = chatParticipants.some(p => p.userId !== CURRENT_USER_ID && onlineUsers[p.userId]);
+                                            return anyOnline ? '🟢 Online' : '⚫ Offline';
+                                        }
+                                        return '🟢 Ligado';
+                                    })())
+                                )
+                            ),
+                            // Messages
+                            React.createElement('div', { className: 'msg-area' },
+                                messages.map(msg =>
+                                    React.createElement(MessageBubble, {
+                                        key: msg.messageId || Math.random(), msg,
+                                        isOwn: msg.senderUserId === CURRENT_USER_ID
+                                    })
+                                ),
+                                React.createElement('div', { ref: messagesEndRef })
+                            ),
+                            // Typing
+                            React.createElement('div', { className: 'typing-bar' },
+                                typingUser ? `${typingUser} está a escrever...` : ''
+                            ),
+                            // Composer
+                            React.createElement('div', { className: 'msg-composer' },
+                                React.createElement('form', { onSubmit: sendMessage },
+                                    React.createElement('div', { className: 'msg-input-row' },
+                                        React.createElement('textarea', {
+                                            className: 'msg-input', rows: 1,
+                                            placeholder: 'Escreve uma mensagem...',
+                                            value: input, onChange: handleInputChange, onKeyDown: handleKeyDown
+                                        }),
+                                        React.createElement('button', { type: 'submit', className: 'msg-send-btn', disabled: !input.trim() },
+                                            React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'currentColor' },
+                                                React.createElement('path', { d: 'M2.01 21L23 12 2.01 3 2 10l15 2-15 2z' })
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                        : React.createElement('div', { className: 'msg-empty' },
+                            React.createElement('div', { className: 'msg-empty-icon' }, '💬'),
+                            React.createElement('p', null, 'Seleciona uma conversa para começar a mensagem'),
+                            React.createElement('a', { href: '/Chats/Create', style: { color: 'var(--primary)', fontSize: '0.9rem' } }, 'Ou cria uma nova conversa →')
+                        )
+                )
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('messages-app'));
+        root.render(React.createElement(MessagesApp));
+    </script>
+}

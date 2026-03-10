@@ -1,0 +1,305 @@
+@model APIPSI16.Models.Company
+@using System.Security.Claims
+@{
+    ViewData["Title"] = $"Gerir {Model.Name}";
+    var company = ViewBag.Company as APIPSI16.Models.Company ?? Model;
+    var opps = ViewBag.CompanyOpportunities as List<APIPSI16.Models.Opportunity> ?? new List<APIPSI16.Models.Opportunity>();
+    var isAdmin = User.FindFirst(ClaimTypes.Role)?.Value == "0";
+    var initial = !string.IsNullOrEmpty(company.Name) ? company.Name[0].ToString().ToUpper() : "?";
+
+    var statusLabels = new Dictionary<byte, (string label, string color)>
+    {
+        {0,("Enviada","#6b7280")},{1,("Em análise","#0052CC")},{2,("Entrevista","#7c3aed")},
+        {3,("Oferta","#059669")},{4,("Aceite","#10b981")},{5,("Recusada","#ef4444")}
+    };
+}
+
+<style>
+    .manage-page { max-width: 960px; margin: 0 auto; padding-bottom: 3rem; }
+    .manage-header {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+        display: flex; gap: 1.25rem; align-items: center;
+    }
+    .manage-logo {
+        width: 60px; height: 60px; border-radius: 12px; flex-shrink: 0;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; color: #fff; font-weight: 800;
+    }
+    .manage-logo img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; }
+    .manage-company-name { font-size: 1.4rem; font-weight: 800; }
+    .manage-meta { font-size: 0.85rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.2rem; }
+    .manage-actions { margin-left: auto; display: flex; gap: 0.6rem; }
+
+    .manage-section { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .manage-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.1rem; }
+
+    .opp-row {
+        display: flex; gap: 1rem; align-items: center; padding: 0.85rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .opp-row:last-child { border-bottom: none; }
+    .opp-row-info { flex: 1; }
+    .opp-row-title { font-weight: 600; font-size: 0.95rem; color: inherit; text-decoration: none; }
+    .opp-row-title:hover { color: #4f8ef7; }
+    .opp-row-meta { font-size: 0.78rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.15rem; }
+    .opp-row-actions { display: flex; gap: 0.4rem; }
+
+    .btn-sm-blue { background: #0052CC; color: #fff; border: none; border-radius: 20px; padding: 0.25rem 0.8rem; font-size: 0.78rem; text-decoration: none; display: inline-block; }
+    .btn-sm-blue:hover { background: #0040A0; color: #fff; }
+    .btn-sm-outline { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 20px; padding: 0.25rem 0.8rem; font-size: 0.78rem; text-decoration: none; display: inline-block; }
+    .btn-sm-outline:hover { background: rgba(255,255,255,0.05); color: inherit; }
+    .btn-sm-danger { background: transparent; border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 20px; padding: 0.25rem 0.8rem; font-size: 0.78rem; text-decoration: none; display: inline-block; }
+    .btn-sm-danger:hover { background: rgba(239,68,68,0.07); }
+
+    .pipeline-header { display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+    .pipeline-col { min-width: 220px; flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; }
+    .pipeline-col-header { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; }
+    .pipeline-col-title { font-size: 0.82rem; font-weight: 700; }
+    .pipeline-badge { background: rgba(255,255,255,0.12); border-radius: 20px; padding: 0.1rem 0.5rem; font-size: 0.72rem; }
+    .pipeline-cards { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 60px; }
+    .pipeline-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.7rem 0.85rem; font-size: 0.82rem; cursor: pointer; }
+    .pipeline-card:hover { border-color: rgba(0,82,204,0.4); }
+    .pipeline-card-name { font-weight: 600; }
+    .pipeline-card-opp { font-size: 0.75rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.1rem; }
+    .pipeline-card-date { font-size: 0.7rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.2rem; }
+</style>
+
+<div class="container py-4">
+    <div class="manage-page">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-4">← Empresas</a>
+
+        <!-- Header -->
+        <div class="manage-header">
+            <div class="manage-logo">
+                @if (!string.IsNullOrEmpty(company.CompanyLogoUrl))
+                {
+                    <img src="@company.CompanyLogoUrl" alt="@company.Name" />
+                }
+                else
+                {
+                    @initial
+                }
+            </div>
+            <div>
+                <div class="manage-company-name">@company.Name</div>
+                <div class="manage-meta">
+                    @if (!string.IsNullOrEmpty(company.Industry)) { <span>🏭 @company.Industry  </span> }
+                    @if (!string.IsNullOrEmpty(company.Location)) { <span>📍 @company.Location</span> }
+                </div>
+            </div>
+            <div class="manage-actions">
+                <a asp-action="Edit" asp-route-id="@company.CompanyId" class="btn btn-sm btn-outline-primary">Editar empresa</a>
+                <a asp-action="Details" asp-route-id="@company.CompanyId" class="btn btn-sm btn-outline-secondary">Ver página pública</a>
+            </div>
+        </div>
+
+        <!-- Opportunities section -->
+        <div class="manage-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h3 style="margin:0;">💼 Oportunidades (@opps.Count)</h3>
+                <a asp-controller="Opportunities" asp-action="Create" asp-route-companyId="@company.CompanyId" class="btn-sm-blue">+ Nova vaga</a>
+            </div>
+
+            @if (!opps.Any())
+            {
+                <p style="color:var(--dark-text-muted,#a8b2c1);font-size:0.88rem;">Ainda não há vagas publicadas para esta empresa.</p>
+            }
+            else
+            {
+                @foreach (var opp in opps)
+                {
+                    var empTypes = new Dictionary<byte,string>{{1,"Full-Time"},{2,"Part-Time"},{3,"Contract"},{4,"Internship"},{5,"Freelance"}};
+                    var remTypes = new Dictionary<byte,string>{{0,"No local"},{1,"Híbrido"},{2,"Remoto"}};
+                    <div class="opp-row">
+                        <div class="opp-row-info">
+                            <a asp-controller="Opportunities" asp-action="Details" asp-route-id="@opp.Id" class="opp-row-title">@(opp.Title ?? "Vaga")</a>
+                            <div class="opp-row-meta">
+                                @if (!string.IsNullOrEmpty(opp.Location)) { <span>📍 @opp.Location  </span> }
+                                @if (opp.EmploymentType.HasValue && empTypes.ContainsKey(opp.EmploymentType.Value)) { <span>⏱ @empTypes[opp.EmploymentType.Value]  </span> }
+                                @if (opp.RemoteOption.HasValue && remTypes.ContainsKey(opp.RemoteOption.Value)) { <span>🌐 @remTypes[opp.RemoteOption.Value]</span> }
+                            </div>
+                        </div>
+                        <div class="opp-row-actions">
+                            <a asp-controller="Applications" asp-action="Pipeline" asp-route-companyId="@company.CompanyId" asp-route-opportunityId="@opp.Id" class="btn-sm-blue">Pipeline</a>
+                            <a asp-controller="Opportunities" asp-action="Edit" asp-route-id="@opp.Id" class="btn-sm-outline">Editar</a>
+                            @if (isAdmin)
+                            {
+                                <a asp-controller="Opportunities" asp-action="Delete" asp-route-id="@opp.Id" class="btn-sm-danger">Eliminar</a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Quick stats -->
+        <div class="manage-section">
+            <h3>📊 Resumo</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem;text-align:center;">
+                    <div style="font-size:1.6rem;font-weight:800;color:#4f8ef7;">@opps.Count</div>
+                    <div style="font-size:0.75rem;color:var(--dark-text-muted,#a8b2c1);">Vagas publicadas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team members section -->
+        <div class="manage-section" id="team-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h3 style="margin:0;">👥 Equipa</h3>
+            </div>
+            <div id="team-list"><p style="color:#a8b2c1;font-size:0.85rem;">A carregar membros...</p></div>
+        </div>
+
+        <!-- Pending employer requests section (visible to CompanyAdmin and system Admin) -->
+        @if (isAdmin)
+        {
+            <div class="manage-section" id="pending-requests-section">
+                <h3>📋 Pedidos de Empregador Pendentes</h3>
+                <div id="pending-requests-list"><p style="color:#a8b2c1;font-size:0.85rem;">A carregar...</p></div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function() {
+    var companyId = @company.CompanyId;
+    var ROLES = {
+        0: { label: 'Pendente', color: '#6b7280', desc: 'Membro pendente de aprovação' },
+        1: { label: 'Recrutador', color: '#0052CC', desc: 'Pode criar e gerir vagas de recrutamento' },
+        2: { label: 'Gestor RH', color: '#7c3aed', desc: 'Pode gerir candidaturas e fazer ofertas' },
+        3: { label: 'Admin de Empresa', color: '#059669', desc: 'Acesso total — gere a equipa e a empresa' }
+    };
+
+    function getToken() {
+        var m = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ApiAccessToken=');});
+        return m ? decodeURIComponent(m.split('=')[1]) : (localStorage.getItem('token')||'');
+    }
+    function apiFetch(url, opts) {
+        opts = opts || {};
+        return fetch(url, Object.assign({}, opts, { headers: Object.assign({'Content-Type':'application/json','Authorization':'Bearer '+getToken()}, opts.headers||{}) }));
+    }
+
+    // Determine if current user is CompanyAdmin
+    var currentUserMemberRole = -1;
+
+    function renderMemberRow(m, canManageRoles) {
+        var r = ROLES[m.role] || { label: 'Membro', color: '#a8b2c1', desc: '' };
+        var roleChangeHtml = '';
+        if (canManageRoles && m.userId !== undefined) {
+            roleChangeHtml = '<select id="role-select-' + m.userId + '" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.2rem 0.4rem;font-size:0.72rem;color:inherit;cursor:pointer;" onchange="changeMemberRole(' + m.userId + ', this.value)">' +
+                '<option value="1"' + (m.role===1?' selected':'') + '>Recrutador</option>' +
+                '<option value="2"' + (m.role===2?' selected':'') + '>Gestor RH</option>' +
+                '<option value="3"' + (m.role===3?' selected':'') + '>Admin de Empresa</option>' +
+                '</select>';
+        }
+        return '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+            '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0052CC,#00DD55);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;">' +
+            (m.userName ? m.userName[0].toUpperCase() : '?') + '</div>' +
+            '<div style="flex:1;">' +
+            '<div style="font-weight:600;font-size:0.9rem;">' + (m.userName || '?') + '</div>' +
+            '<div style="font-size:0.75rem;color:#a8b2c1;">' + r.desc + '</div></div>' +
+            (roleChangeHtml || '<span style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:0.2rem 0.65rem;font-size:0.75rem;font-weight:600;color:' + r.color + ';">' + r.label + '</span>') +
+            '</div>';
+    }
+
+    window.changeMemberRole = function(userId, newRole) {
+        apiFetch('/api/users/' + userId + '/company-role', {
+            method: 'PUT',
+            body: JSON.stringify({ CompanyId: companyId, NewRole: parseInt(newRole) })
+        }).then(function(r) {
+            if (r.ok) {
+                loadTeam();
+            } else {
+                r.text().then(function(t) { alert('Erro ao alterar função: ' + t); });
+            }
+        });
+    };
+
+    function loadTeam() {
+        apiFetch('/api/companies/' + companyId + '/profile').then(function(r){ return r.json(); }).then(function(profile) {
+            var list = document.getElementById('team-list');
+            if (!list) return;
+            var mems = (profile && profile.members) ? profile.members : [];
+            if (mems.length === 0) {
+                list.innerHTML = '<p style="color:#a8b2c1;font-size:0.85rem;">Ainda sem membros de equipa.</p>';
+                return;
+            }
+
+            // Find current user's role
+            var myId = parseInt('@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0")');
+            var myMember = mems.find(function(m) { return m.userId === myId; });
+            var canManageRoles = @(isAdmin ? "true" : "false") || (myMember && myMember.role >= 3);
+
+            list.innerHTML = mems.map(function(m) {
+                return renderMemberRow(m, canManageRoles);
+            }).join('');
+        }).catch(function() {
+            var list = document.getElementById('team-list');
+            if (list) list.innerHTML = '<p style="color:#a8b2c1;font-size:0.85rem;">Não foi possível carregar membros.</p>';
+        });
+    }
+
+    @if (isAdmin)
+    {
+        <text>
+    function loadPendingRequests() {
+        var section = document.getElementById('pending-requests-list');
+        if (!section) return;
+        apiFetch('/api/users/pending-employers').then(function(r){ return r.json(); }).then(function(users) {
+            if (!users || users.length === 0) {
+                section.innerHTML = '<p style="color:#a8b2c1;font-size:0.85rem;">Sem pedidos pendentes.</p>';
+                return;
+            }
+            // Filter to those with company membership for this company
+            section.innerHTML = users.map(function(u) {
+                var docHtml = u.employerRequestDocumentUrl
+                    ? '<a href="' + u.employerRequestDocumentUrl + '" target="_blank" style="font-size:0.78rem;color:#4f8ef7;">📄 Ver anexo</a>'
+                    : '<span style="font-size:0.78rem;color:#6b7280;">Sem anexo</span>';
+                var noteHtml = u.employerRequestNote
+                    ? '<div style="font-size:0.75rem;color:#a8b2c1;margin-top:0.2rem;">' + u.employerRequestNote + '</div>'
+                    : '';
+                return '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                    '<div style="width:36px;height:36px;border-radius:50%;background:rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#f59e0b;">' +
+                    (u.name ? u.name[0].toUpperCase() : '?') + '</div>' +
+                    '<div style="flex:1;">' +
+                    '<div style="font-weight:600;font-size:0.88rem;">' + (u.name || '—') + '</div>' +
+                    '<div style="font-size:0.75rem;color:#a8b2c1;">' + (u.email || '') + '</div>' +
+                    noteHtml + '</div>' +
+                    docHtml +
+                    '<button onclick="approveRequest(' + u.userId + ')" style="background:rgba(0,221,85,0.12);border:1px solid rgba(0,221,85,0.3);color:#00DD55;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;cursor:pointer;margin-left:0.4rem;">✓ Aprovar</button>' +
+                    '<button onclick="rejectRequest(' + u.userId + ')" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;cursor:pointer;margin-left:0.3rem;">✗ Rejeitar</button>' +
+                    '</div>';
+            }).join('');
+        }).catch(function() {
+            if (section) section.innerHTML = '<p style="color:#a8b2c1;font-size:0.85rem;">Não foi possível carregar pedidos.</p>';
+        });
+    }
+    window.approveRequest = function(uid) {
+        apiFetch('/api/users/' + uid + '/approve-employer', { method: 'POST' }).then(function(r) {
+            if (r.ok) { loadTeam(); loadPendingRequests(); }
+            else r.text().then(function(t){ alert(t); });
+        });
+    };
+    window.rejectRequest = function(uid) {
+        apiFetch('/api/users/' + uid + '/reject-employer', { method: 'POST' }).then(function(r) {
+            if (r.ok) { loadPendingRequests(); }
+            else r.text().then(function(t){ alert(t); });
+        });
+    };
+    document.addEventListener('DOMContentLoaded', function() { loadTeam(); loadPendingRequests(); });
+        </text>
+    }
+    else
+    {
+        <text>
+    document.addEventListener('DOMContentLoaded', loadTeam);
+        </text>
+    }
+})();
+</script>
+}

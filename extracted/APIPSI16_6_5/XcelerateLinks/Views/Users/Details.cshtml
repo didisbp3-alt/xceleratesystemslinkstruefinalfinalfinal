@@ -1,0 +1,500 @@
+@model APIPSI16.Models.DTOs.UserProfileDTO
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = Model?.Name ?? "Perfil";
+    var displayName = Model?.Name ?? "Usuário";
+    var avatarUrl = Model?.ProfilePictureUrl;
+    var bannerUrl = Model?.BannerUrl;
+    var location = Model?.LocationName ?? Model?.Location ?? "";
+    var countryDisplay = Model?.CountryName;
+    var currentUserId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    bool isOwner = false;
+    if (!string.IsNullOrEmpty(currentUserId) && Model != null)
+    {
+        if (int.TryParse(currentUserId, out var id)) isOwner = id == Model.UserId;
+    }
+    var returnUrl = ViewBag.ReturnUrl as string;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/profile.css" asp-append-version="true" />
+}
+
+<section class="profile-banner" aria-hidden="false">
+    <div class="banner-img-wrapper">
+        @if (!string.IsNullOrEmpty(bannerUrl))
+        {
+            <img src="@bannerUrl" alt="Banner for @displayName" class="banner-img" />
+        }
+        else
+        {
+            <div class="banner-placeholder">
+                <div class="banner-gradient"></div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="profile-container container">
+    @if (!string.IsNullOrEmpty(returnUrl))
+    {
+        <div class="mt-3 mb-1">
+            <a href="@returnUrl" class="btn btn-sm btn-outline-secondary">← Back to Pipeline</a>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success mt-3" style="animation:slideDown 0.3s ease both;">@TempData["SuccessMessage"]</div>
+    }
+    <div class="profile-top">
+        <div class="profile-card">
+            <div class="profile-avatar">
+                @if (!string.IsNullOrEmpty(avatarUrl))
+                {
+                    <img src="@avatarUrl" alt="@displayName" class="avatar-img" />
+                }
+                else
+                {
+                    <div class="avatar-initials">
+                        @(
+                                            (displayName ?? "U").Split(' ', StringSplitOptions.RemoveEmptyEntries) is var parts
+                                            ? (parts.Length == 1 ? parts[0].Substring(0, 1).ToUpperInvariant() : (parts[0].Substring(0, 1) + parts[^1].Substring(0, 1)).ToUpperInvariant())
+                                            : "U")
+                </div>
+                                }
+            </div>
+
+            <div class="profile-summary">
+                <h1 class="profile-name">@displayName</h1>
+
+                <div class="profile-headline">
+                    @if (!string.IsNullOrWhiteSpace(Model?.ProfileBio))
+                    {
+                        @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.ProfileBio).Replace("\n", "<br/>"))
+                    }
+                    else
+                    {
+                        <span class="text-muted">Sem descrição pública.</span>
+                    }
+                </div>
+
+                <div class="profile-meta">
+                    @{
+                        bool isEmployer = Model?.Role == 2;
+                        bool showOpenToWork = Model?.IsOpenToWork == true && !isEmployer;
+                    }
+                    @if (showOpenToWork)
+                    {
+                        <span class="meta-item" style="background:rgba(0,221,85,0.12);border:1px solid rgba(0,221,85,0.3);color:#00DD55;border-radius:20px;padding:0.2rem 0.75rem;font-size:0.8rem;font-weight:600;">🟢 Disponível para trabalhar</span>
+                    }
+                    else if (isEmployer)
+                    {
+                        <span class="meta-item" style="background:rgba(0,82,204,0.12);border:1px solid rgba(0,82,204,0.3);color:#4d90fe;border-radius:20px;padding:0.2rem 0.75rem;font-size:0.8rem;font-weight:600;">🏢 Empregador</span>
+                    }
+                    else if (Model?.IsOpenToWork == false)
+                    {
+                        <span class="meta-item" style="background:rgba(168,178,193,0.12);border:1px solid rgba(168,178,193,0.3);color:#a8b2c1;border-radius:20px;padding:0.2rem 0.75rem;font-size:0.8rem;font-weight:600;">💼 A trabalhar</span>
+                    }
+                    @if (!string.IsNullOrEmpty(location))
+                    {
+                        <span class="meta-item">📍 @location@(countryDisplay != null ? $", {countryDisplay}" : "")</span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model?.Email))
+                    {
+                        <span class="meta-item">✉️ <a class="meta-link" href="mailto:@Model.Email">@Model.Email</a></span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model?.PhoneNumber))
+                    {
+                        <span class="meta-item">📞 <a class="meta-link" href="tel:@Model.PhoneNumber">@Model.PhoneNumber</a></span>
+                    }
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                @{
+                    var viewerRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                    var isViewerAdmin = viewerRole == "0";
+                    var profileRole = Model?.Role ?? 1;
+                }
+                @if (isOwner)
+                {
+                    <a class="btn btn-outline" href="@Url.Action("Edit", "Users", new { id = Model.UserId })">Editar Perfil</a>
+                    @if (profileRole == 1)
+                    {
+                        <a class="btn btn-primary" href="@Url.Action("RequestEmployer", "Users")">🏢 Tornar-me Empregador</a>
+                    }
+                    else if (profileRole == 3)
+                    {
+                        <span class="btn btn-outline" style="opacity:0.6;cursor:default;">⏳ Pedido em análise</span>
+                    }
+                    else if (profileRole == 2)
+                    {
+                        <span class="btn btn-outline" style="border-color:#00DD55;color:#00DD55;cursor:default;">✓ Empregador</span>
+                        <form method="post" asp-action="ResignEmployer" class="d-inline" onsubmit="return confirm('Tens a certeza que queres remover o teu estatuto de empregador?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline" style="border-color:#ef4444;color:#ef4444;font-size:0.82rem;padding:0.3rem 0.8rem;">Remover Estatuto</button>
+                        </form>
+                    }
+                }
+                else
+                {
+                    <form method="post" asp-controller="Connections" asp-action="Connect" class="d-inline">
+                        <input type="hidden" name="targetUserId" value="@Model.UserId" />
+                        <button class="btn btn-primary" type="submit">Conectar</button>
+                    </form>
+                    <a class="btn btn-outline" href="@Url.Action("Create", "Chats", new { withUserId = Model.UserId })">💬 Enviar Mensagem</a>
+
+                    @if (isViewerAdmin && profileRole == 3) // Admin can approve/reject
+                    {
+                        <form method="post" asp-action="ApproveEmployer" asp-route-id="@Model.UserId" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-sm">✓ Aprovar Empregador</button>
+                        </form>
+                        <form method="post" asp-action="RejectEmployer" asp-route-id="@Model.UserId" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger btn-sm">✗ Rejeitar</button>
+                        </form>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-body">
+        <div class="profile-main">
+            <div class="card about-card">
+                <div class="card-header"><h3>Sobre</h3></div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(Model?.ProfileBio))
+                    {
+                        <p>@Model.ProfileBio</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Este utilizador ainda não adicionou uma descrição.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header"><h3>Experiência</h3></div>
+                <div class="card-body">
+                    @if (Model?.Experiences != null && Model.Experiences.Any())
+                    {
+                        <ul class="timeline">
+                            @foreach (var exp in Model.Experiences)
+                            {
+                                <li>
+                                    <div class="timeline-title">@exp.JobTitle @if(!string.IsNullOrEmpty(exp.CompanyName)){
+                                    <span class="muted"> — @exp.CompanyName</span>
+                                }
+    </div>
+                                <div class="timeline-sub">@((exp.StartDate.HasValue) ? exp.StartDate.Value.ToString("yyyy") : "—") - @(exp.EndDate.HasValue? exp.EndDate.Value.ToString("yyyy") : "Atualmente")</div>
+                                @if (!string.IsNullOrWhiteSpace(exp.Description))
+                                {
+                                    <p class="mt-2">@exp.Description</p>
+                                }
+                            </li>
+                        }
+                    </ul>
+                                        }
+                                        else
+                    {
+                        <p class="text-muted">Nenhuma experiência pública disponível.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header"><h3>Formação</h3></div>
+                <div class="card-body">
+                    @if (Model?.Educations != null && Model.Educations.Any())
+                    {
+                        <ul class="timeline">
+                            @foreach (var edu in Model.Educations)
+                            {
+                                <li>
+                                    <div class="timeline-title">@edu.Degree @if(!string.IsNullOrEmpty(edu.Institution)){
+                                    <span class="muted"> — @edu.Institution</span>
+                                }
+    </div>
+                                <div class="timeline-sub">@((edu.StartDate.HasValue) ? edu.StartDate.Value.ToString("yyyy") : "—") - @(edu.EndDate.HasValue? edu.EndDate.Value.ToString("yyyy") : "—")</div>
+                                @if (!string.IsNullOrWhiteSpace(edu.FieldOfStudy))
+                                {
+                                    <p class="mt-2">@edu.FieldOfStudy</p>
+                                }
+                            </li>
+                        }
+                    </ul>
+                                        }
+                                        else
+                    {
+                        <p class="text-muted">Nenhuma formação adicionada.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header"><h3>Competências</h3></div>
+                <div class="card-body">
+                    @if (Model?.Skills != null && Model.Skills.Any())
+                    {
+                        <div class="skill-list">
+                            @foreach (var s in Model.Skills)
+                            {
+                                <span class="skill-pill">@s.Name @if(s.EndorsementCount > 0){
+                                <small class="text-muted"> · @s.EndorsementCount</small>
+                            }
+    </span>
+                        }
+                    </div>
+                                        }
+                                        else
+                    {
+                        <p class="text-muted">Nenhuma competência listada.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header"><h3>Preferências de Cargo</h3></div>
+                <div class="card-body">
+                    @if (Model?.JobRolePreferences != null && Model.JobRolePreferences.Any())
+                    {
+                        <div class="skill-list">
+                            @foreach (var pref in Model.JobRolePreferences)
+                            {
+                                <span class="skill-pill" style="border-color:rgba(0,82,204,0.4);color:#4f8ef7;background:rgba(0,82,204,0.08);">@pref.Name</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Nenhuma preferência de cargo definida.</p>
+                    }
+                </div>
+            </div>
+
+            @if (Model != null)
+            {
+                <div class="card mt-3" id="ratings-section">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <h3>Avaliações</h3>
+                        <span id="avg-rating-display"></span>
+                    </div>
+                    <div class="card-body">
+                        <div id="ratings-list"><p class="text-muted">A carregar avaliações...</p></div>
+                        @if (!isOwner && User.Identity?.IsAuthenticated == true)
+                        {
+                            <hr style="border-color:rgba(255,255,255,0.08); margin: 1rem 0;" />
+                            <h5 style="font-size:0.9rem; margin-bottom:0.75rem;">Deixa a tua avaliação</h5>
+                            <div id="rating-form-wrap">
+                                <div class="star-selector mb-2" id="star-selector">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span class="star-opt" data-val="@i" style="font-size:1.5rem; cursor:pointer; color:#a8b2c1;">★</span>
+                                    }
+                                </div>
+                                <textarea id="review-text" class="form-control mb-2" placeholder="Escreve uma avaliação (opcional)..." style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:inherit;border-radius:8px;padding:0.5rem 0.75rem;width:100%;resize:vertical;min-height:70px;"></textarea>
+                                <button id="submit-rating-btn" class="btn btn-sm" style="background:#0052CC;color:#fff;border:none;border-radius:20px;padding:0.4rem 1.2rem;" onclick="submitRating('@Model.UserId', 'User')">Enviar avaliação</button>
+                                <span id="rating-msg" style="font-size:0.82rem; margin-left:0.75rem;"></span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <aside class="profile-aside">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="stat-row">
+                        <div>
+                            <div class="stat-number">@Model?.Experiences?.Count ?? 0</div>
+                            <div class="stat-label">Experiências</div>
+                        </div>
+                        <div>
+                            <div class="stat-number">@Model?.Educations?.Count ?? 0</div>
+                            <div class="stat-label">Formação</div>
+                        </div>
+                    </div>
+
+                    <a href="@Url.Action("Index", "Users")" class="btn btn-outline btn-block mt-3">Ver todos os utilizadores</a>
+                </div>
+            </div>
+
+            <div class="card contact-card mt-3">
+                <div class="card-header"><h4>Contacto</h4></div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model?.Email))
+                    {
+                        <div class="contact-item">✉️ <a href="mailto:@Model.Email">@Model.Email</a></div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model?.PhoneNumber))
+                    {
+                        <div class="contact-item">📞 <a href="tel:@Model.PhoneNumber">@Model.PhoneNumber</a></div>
+                    }
+                </div>
+            </div>
+
+            @if (Model != null)
+            {
+                var completeness = 0;
+                if (!string.IsNullOrWhiteSpace(Model.ProfileBio)) completeness += 20;
+                if (Model.Experiences != null && Model.Experiences.Any()) completeness += 20;
+                if (Model.Educations != null && Model.Educations.Any()) completeness += 20;
+                if (Model.Skills != null && Model.Skills.Any()) completeness += 20;
+                if (!string.IsNullOrEmpty(Model.ProfilePictureUrl)) completeness += 20;
+                <div class="card mt-3">
+                    <div class="card-header"><h4>Completude do perfil</h4></div>
+                    <div class="card-body">
+                        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+                            <div style="flex:1; background:rgba(255,255,255,0.08); border-radius:20px; height:8px; overflow:hidden;">
+                                <div style="width:@completeness%; background: @(completeness >= 80 ? "#00DD55" : completeness >= 40 ? "#f59e0b" : "#0052CC"); height:100%; border-radius:20px; transition:width 0.6s;"></div>
+                            </div>
+                            <span style="font-size:0.82rem; font-weight:600;">@completeness%</span>
+                        </div>
+                        <p style="font-size:0.78rem; color:#a8b2c1; margin:0;">
+                            @if (completeness < 100 && isOwner)
+                            {
+                                <span>Completa o teu perfil para aumentar a visibilidade.</span>
+                            }
+                            else if (completeness == 100)
+                            {
+                                <span style="color:#00DD55;">✓ Perfil completo!</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            }
+        </aside>
+    </div>
+</section>
+@section Scripts {
+<script>
+(function() {
+    var entityId = @(Model?.UserId ?? 0);
+    var entityType = 'User';
+    var selectedScore = 0;
+    var existingRatingId = null; // set if current user already rated
+
+    function getToken() {
+        var m = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ApiAccessToken=');});
+        return m ? decodeURIComponent(m.split('=')[1]) : (localStorage.getItem('token') || '');
+    }
+
+    function renderStars(score, max) {
+        var s = '';
+        for (var i = 1; i <= max; i++) s += (i <= score ? '★' : '☆');
+        return s;
+    }
+
+    function setStarUI(score) {
+        selectedScore = score;
+        document.querySelectorAll('#star-selector .star-opt').forEach(function(s) {
+            s.style.color = parseInt(s.dataset.val) <= score ? '#f59e0b' : '#a8b2c1';
+        });
+    }
+
+    function loadRatings() {
+        var list = document.getElementById('ratings-list');
+        fetch('/api/ratings/entity/' + entityType + '/' + entityId, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        }).then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).then(function(ratings) {
+            var avgEl = document.getElementById('avg-rating-display');
+            if (!ratings || ratings.length === 0) {
+                if (list) list.innerHTML = '<p class="text-muted">Ainda sem avaliações.</p>';
+                if (avgEl) avgEl.textContent = '';
+                return;
+            }
+            var avg = ratings.reduce(function(s,r){return s+r.score;},0)/ratings.length;
+            if (avgEl) avgEl.innerHTML = '<span style="color:#f59e0b;font-size:1.1rem;">' + renderStars(Math.round(avg), 5) + '</span> <small style="color:#a8b2c1;">' + avg.toFixed(1) + ' / 5 (' + ratings.length + ')</small>';
+            if (list) {
+                list.innerHTML = ratings.map(function(r) {
+                    var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-PT') : '';
+                    var safeName = (r.ratedByUserName || 'Utilizador').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    var reviewHtml = r.review ? '<p style="font-size:0.85rem;color:#a8b2c1;margin:0;">' + r.review.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>' : '';
+                    return '<div style="padding:0.75rem 0; border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                        '<strong style="font-size:0.88rem;">' + safeName + '</strong>' +
+                        '<span style="color:#f59e0b;">' + renderStars(r.score, 5) + '</span></div>' +
+                        reviewHtml +
+                        '<small style="color:#6b7280;">' + date + '</small></div>';
+                }).join('');
+            }
+        }).catch(function(err) {
+            if (list) list.innerHTML = '<p class="text-muted" style="color:#ef4444;">Não foi possível carregar as avaliações.</p>';
+        });
+    }
+
+    // Check if current user already rated this entity (pre-fill form)
+    function loadMyRating() {
+        fetch('/api/ratings/my/' + entityType + '/' + entityId, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        }).then(function(r) {
+            if (r.status === 404) return null;
+            if (!r.ok) return null;
+            return r.json();
+        }).then(function(myRating) {
+            if (!myRating) return;
+            // Pre-fill the rating form with existing values
+            existingRatingId = myRating.ratingId;
+            setStarUI(myRating.score);
+            var reviewEl = document.getElementById('review-text');
+            if (reviewEl) reviewEl.value = myRating.review || '';
+            var btn = document.getElementById('submit-rating-btn');
+            if (btn) btn.textContent = 'Atualizar avaliação';
+            var msg = document.getElementById('rating-msg');
+            if (msg) msg.textContent = '(já avaliaste – podes editar)';
+        }).catch(function() {});
+    }
+
+    // Star selector
+    var stars = document.querySelectorAll('#star-selector .star-opt');
+    stars.forEach(function(star) {
+        star.addEventListener('click', function() {
+            setStarUI(parseInt(this.dataset.val));
+        });
+        star.addEventListener('mouseover', function() {
+            var v = parseInt(this.dataset.val);
+            stars.forEach(function(s) {
+                s.style.color = parseInt(s.dataset.val) <= v ? '#f59e0b' : '#a8b2c1';
+            });
+        });
+        star.addEventListener('mouseout', function() {
+            stars.forEach(function(s) {
+                s.style.color = parseInt(s.dataset.val) <= selectedScore ? '#f59e0b' : '#a8b2c1';
+            });
+        });
+    });
+
+    window.submitRating = function(id, type) {
+        if (selectedScore < 1) { document.getElementById('rating-msg').textContent = 'Seleciona uma classificação.'; return; }
+        var review = document.getElementById('review-text').value.trim();
+        var payload = JSON.stringify({ ratedEntityId: parseInt(id), entityType: type, score: selectedScore, review: review });
+        // Always POST (server upserts); or PUT if we have an existing rating ID
+        fetch('/api/ratings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: payload
+        }).then(function(r) {
+            if (r.ok || r.status === 201) {
+                document.getElementById('rating-form-wrap').innerHTML = '<p style="color:#00DD55;">✓ Avaliação enviada!</p>';
+                loadRatings();
+            } else {
+                return r.text().then(function(t) {
+                    document.getElementById('rating-msg').textContent = t || 'Erro ao enviar avaliação.';
+                });
+            }
+        }).catch(function(){ document.getElementById('rating-msg').textContent = 'Erro de ligação.'; });
+    };
+
+    loadRatings();
+    loadMyRating();
+})();
+</script>
+}

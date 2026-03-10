@@ -1,0 +1,22 @@
+@model APIPSI16.Models.DTOs.ChatDetailDTO
+@{
+    ViewData["Title"] = "Detalhes da conversa";
+}
+
+<h2 class="mb-3">Detalhes da conversa</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Tipo</dt>
+    <dd class="col-sm-9">@Model.Type</dd>
+
+    <dt class="col-sm-3">Criado em</dt>
+    <dd class="col-sm-9">@Model.CreatedAt?.ToString("f")</dd>
+
+    <dt class="col-sm-3">Criado por</dt>
+    <dd class="col-sm-9">@Model.CreatedByUserName</dd>
+</dl>
+
+<div class="d-flex gap-2">
+    <a asp-action="Delete" asp-route-id="@Model.ChatId" class="btn btn-outline-danger">Eliminar</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
+</div>

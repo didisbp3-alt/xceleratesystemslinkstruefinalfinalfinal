@@ -1,0 +1,147 @@
+@model IEnumerable<APIPSI16.Models.DTOs.UserDTO>
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Rede";
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+}
+
+<style>
+    .network-hero {
+        background: linear-gradient(135deg, rgba(0,82,204,0.12), rgba(0,221,85,0.06));
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .network-hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .network-hero p { color: var(--dark-text-muted, #a8b2c1); margin: 0; }
+    .search-bar { max-width: 560px; margin: 1.5rem 0 0; }
+    .search-bar .input-group { border-radius: 30px; overflow: hidden; }
+    .search-bar input { border-right: none; background: rgba(255,255,255,0.06); color: inherit; border-color: rgba(255,255,255,0.12); }
+    .search-bar input:focus { background: rgba(255,255,255,0.1); box-shadow: none; border-color: #0052CC; color: inherit; }
+    .search-bar .btn { border-radius: 0 30px 30px 0 !important; }
+
+    .people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+
+    .person-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.2s, border-color 0.2s;
+        display: flex;
+        flex-direction: column;
+    }
+    .person-card:hover { transform: translateY(-3px); border-color: rgba(0,82,204,0.4); }
+
+    .person-card-banner {
+        height: 72px;
+        background: linear-gradient(135deg, rgba(0,82,204,0.3), rgba(0,221,85,0.15));
+    }
+    .person-card-banner img { width: 100%; height: 100%; object-fit: cover; }
+
+    .person-card-body { padding: 0 1.2rem 1.2rem; flex: 1; display: flex; flex-direction: column; }
+
+    .person-avatar-wrap { margin-top: -32px; margin-bottom: 0.75rem; }
+    .person-avatar {
+        width: 64px; height: 64px; border-radius: 50%;
+        border: 3px solid #0b1220;
+        object-fit: cover;
+    }
+    .person-initials {
+        width: 64px; height: 64px; border-radius: 50%;
+        border: 3px solid #0b1220;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 22px; font-weight: 800; color: #fff;
+    }
+
+    .person-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.2rem; color: inherit; text-decoration: none; }
+    .person-name:hover { color: #0052CC; text-decoration: none; }
+    .person-bio { font-size: 0.82rem; color: var(--dark-text-muted, #a8b2c1); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.75rem; flex: 1; }
+
+    .person-actions { margin-top: auto; display: flex; gap: 0.5rem; }
+    .btn-connect { flex: 1; border: 1px solid #0052CC; color: #0052CC; border-radius: 30px; padding: 0.35rem 0; font-size: 0.82rem; background: transparent; transition: background 0.2s; }
+    .btn-connect:hover { background: rgba(0,82,204,0.12); }
+    .btn-message { flex: 1; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 30px; padding: 0.35rem 0; font-size: 0.82rem; background: transparent; transition: background 0.2s; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-message:hover { background: rgba(255,255,255,0.06); color: inherit; }
+
+    .no-results { text-align: center; padding: 4rem 2rem; color: var(--dark-text-muted, #a8b2c1); }
+    .no-results svg { opacity: 0.3; margin-bottom: 1rem; }
+</style>
+
+<div class="container py-4">
+    <div class="network-hero">
+        <h1>👥 Rede Profissional</h1>
+        <p>Descubra profissionais e expanda a sua rede de contactos.</p>
+
+        <form asp-action="Network" method="get" class="search-bar">
+            <div class="input-group">
+                <input type="search" name="search" class="form-control" placeholder="Pesquisar por nome ou área profissional..."
+                       value="@ViewBag.Search" />
+                <button type="submit" class="btn btn-primary">Pesquisar</button>
+            </div>
+        </form>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="no-results">
+            <svg width="64" height="64" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <p>@(string.IsNullOrWhiteSpace(ViewBag.Search as string) ? "Nenhum utilizador encontrado." : $"Nenhum resultado para \"{ViewBag.Search}\"")</p>
+            @if (!string.IsNullOrWhiteSpace(ViewBag.Search as string))
+            {
+                <a asp-action="Network" class="btn btn-outline-secondary btn-sm mt-2">Limpar pesquisa</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="people-grid">
+            @foreach (var user in Model)
+            {
+                var initials = string.IsNullOrWhiteSpace(user.Name) ? "?" :
+                    (user.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var parts
+                        ? (parts.Length == 1 ? parts[0][..1].ToUpper() : (parts[0][..1] + parts[^1][..1]).ToUpper())
+                        : "?");
+                var isMe = currentUserId == user.UserId.ToString();
+
+                <div class="person-card">
+                    <div class="person-card-banner">
+                        @if (!string.IsNullOrEmpty(user.BannerUrl))
+                        {
+                            <img src="@user.BannerUrl" alt="" />
+                        }
+                    </div>
+                    <div class="person-card-body">
+                        <div class="person-avatar-wrap">
+                            @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                            {
+                                <img src="@user.ProfilePictureUrl" class="person-avatar" alt="@user.Name" />
+                            }
+                            else
+                            {
+                                <span class="person-initials">@initials</span>
+                            }
+                        </div>
+                        <a asp-action="Details" asp-route-id="@user.UserId" class="person-name">@(user.Name ?? "Utilizador")</a>
+                        <p class="person-bio">@(user.ProfileBio ?? "Sem descrição.")</p>
+                        <div class="person-actions">
+                            @if (!isMe)
+                            {
+                                <form method="post" asp-controller="Connections" asp-action="Connect" class="flex-1">
+                                    <input type="hidden" name="targetUserId" value="@user.UserId" />
+                                    <button type="submit" class="btn-connect w-100">+ Ligar</button>
+                                </form>
+                                <a asp-controller="Chats" asp-action="Create" asp-route-withUserId="@user.UserId" class="btn-message">💬 Mensagem</a>
+                            }
+                            else
+                            {
+                                <a asp-action="Edit" asp-route-id="@user.UserId" class="btn-message w-100">✏️ Editar Perfil</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -1,0 +1,110 @@
+﻿@model XcelerateLinks.Models.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Entrar";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+    <style>
+        .login-card {
+            position: relative;
+        }
+
+        .back-to-home-btn {
+            display: inline-block;
+            padding: 10px 28px;
+            background: #0d6efd;
+            color: #fff !important;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: .02em;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+            font-size: 1.12rem;
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 12;
+        }
+
+            .back-to-home-btn:hover, .back-to-home-btn:focus {
+                background: #023e8a;
+                color: #fff !important;
+                box-shadow: 0 3px 12px rgba(0,0,0,0.13);
+                text-decoration: none;
+            }
+        
+        @@media (max-width: 700px) {
+            .back-to-home-btn
+
+        {
+            left: 6px;
+            top: 6px;
+            font-size: .99rem;
+            padding: 7px 16px;
+        }
+
+        }</style>
+}
+
+<section class="login-hero login-centered">
+    <div class="hero-right">
+        <div class="login-card">
+            <!-- Place button INSIDE login-card for top-left relative positioning -->
+            <a href="/" class="back-to-home-btn">← Voltar ao Início</a>
+            <div class="card-illustration" aria-hidden="true">
+                <img src="~/images/xcelerate-logo.png" alt="" class="illustration-logo" />
+                <h4>Bem-vindo de volta</h4>
+                <p class="illustration-subtitle">Aceda à sua conta para gerir os seus links e oportunidades.</p>
+            </div>
+
+            <div class="card-form">
+                <h3>Entrar na sua conta</h3>
+
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState.Values.Any(v => v.Errors.Count > 0))
+                {
+                    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+                }
+
+                <form asp-action="Login" method="post" class="mt-2" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label">Utilizador ou Email</label>
+                        <input asp-for="Username"
+                               class="form-control"
+                               placeholder="nome de utilizador ou email"
+                               autocomplete="username" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label asp-for="Password" class="form-label">Senha</label>
+                        <input asp-for="Password"
+                               type="password"
+                               class="form-control"
+                               placeholder="senha"
+                               autocomplete="current-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                        <!-- Checkbox removed! -->
+                        <span></span>
+                        <a class="secondary-link" href="/Account/ForgotPassword" style="margin: 0;">Esqueceu a senha?</a>
+                    </div>
+
+                    <input asp-for="ReturnUrl" type="hidden" />
+                    <button type="submit" class="login-btn">Entrar</button>
+                    <a class="secondary-link" href="/Account/Register">Ainda não tem conta? Criar conta</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

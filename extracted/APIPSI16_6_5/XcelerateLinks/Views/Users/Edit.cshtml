@@ -1,0 +1,626 @@
+
+@model APIPSI16.Models.DTOs.UserDTO
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2 class="mb-4">Edit Profile</h2>
+
+            <form asp-action="Edit" method="post" enctype="multipart/form-data" id="profileForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="UserId" />
+
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Full Name</label>
+                            <input asp-for="Name" class="form-control" required />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label">Email</label>
+                            <input asp-for="Email" type="email" class="form-control" required title="Enter a valid email address" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label">Phone Number</label>
+                            <input asp-for="PhoneNumber" type="tel" class="form-control" placeholder="+351 9xx xxx xxx" pattern="^\+?[\d\s\-(). ]{7,20}$" title="Enter a valid phone number (7–20 digits, spaces, hyphens, parentheses, or + allowed)" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DoB" class="form-label">Date of Birth</label>
+                            <input asp-for="DoB" type="date" class="form-control" />
+                            <span asp-validation-for="DoB" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Professional Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Nationality" class="form-label">Nationality</label>
+                            <select asp-for="Nationality" class="form-select searchable-select" id="nationalitySelect">
+                                <option value="">— Select nationality —</option>
+                                @foreach (var n in (ViewBag.Nationalities as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                {
+                                    @if (Model.Nationality == n.Id)
+                                    {
+                                        <option value="@n.Id" selected>@n.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@n.Id">@n.Name</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="Nationality" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CountryId" class="form-label">Country</label>
+                            <select asp-for="CountryId" class="form-select searchable-select" id="countrySelect">
+                                <option value="">— Select country —</option>
+                                @foreach (var c in (ViewBag.Countries as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                {
+                                    @if (Model.CountryId == c.Id)
+                                    {
+                                        <option value="@c.Id" data-code="@c.Code" selected>@c.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@c.Id" data-code="@c.Code">@c.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="LocationId" class="form-label">Location / City</label>
+                            <select asp-for="LocationId" class="form-select searchable-select" id="locationSelect">
+                                <option value="">— Select location —</option>
+                                @foreach (var loc in (ViewBag.Locations as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                {
+                                    @if (Model.LocationId == loc.Id)
+                                    {
+                                        <option value="@loc.Id" data-country="@loc.CountryId" selected>@loc.Name (@loc.CountryName)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@loc.Id" data-country="@loc.CountryId">@loc.Name (@loc.CountryName)</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="LocationId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Preferências de cargo</label>
+                            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.75rem;max-height:180px;overflow-y:auto;">
+                                @{
+                                    var selectedJobRoleIds = ViewBag.SelectedJobRoleIds as IEnumerable<int> ?? Enumerable.Empty<int>();
+                                }
+                                @foreach (var j in (ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                {
+                                    <label style="display:flex;align-items:center;gap:0.5rem;padding:0.2rem 0;cursor:pointer;font-size:0.88rem;">
+                                        <input type="checkbox" name="SelectedJobRoleIds" value="@j.Id" style="accent-color:#0052CC;"
+                                            @(selectedJobRoleIds.Contains(j.Id) ? "checked" : "") />
+                                        @j.Name
+                                    </label>
+                                }
+                            </div>
+                            <small class="text-muted">Podes escolher mais do que uma área.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ProfileBio" class="form-label">About Me</label>
+                            <textarea asp-for="ProfileBio" class="form-control" rows="5" 
+                                      placeholder="Tell us about yourself, your experience, and your career goals..."></textarea>
+                            <span asp-validation-for="ProfileBio" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Disponibilidade para Trabalho</label>
+                            <div class="form-check form-switch" style="padding-left:2.5rem;">
+                                <input class="form-check-input" type="checkbox" asp-for="IsOpenToWork" id="openToWorkSwitch" role="switch" />
+                                <label class="form-check-label" for="openToWorkSwitch">
+                                    Disponível para trabalhar (Open to Work)
+                                </label>
+                            </div>
+                            <small class="text-muted">Podes desativar isto se estiveres empregado e não quiseres receber propostas.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                    <a asp-action="Details" asp-route-id="@Model.UserId" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Profile Picture</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        @if (!string.IsNullOrEmpty(Model.ProfilePictureUrl))
+                        {
+                            <img src="@Model.ProfilePictureUrl" alt="Profile Picture" 
+                                 class="img-fluid rounded-circle mb-3" style="max-width: 200px;" id="profilePicturePreview" />
+                        }
+                        else
+                        {
+                            <div class="bg-secondary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 200px; height: 200px; font-size: 72px;" id="profilePicturePreview">
+                                @(Model.Name?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                        }
+                    </div>
+
+                    <form id="uploadPictureForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input type="file" class="form-control" id="profilePictureInput" 
+                                   accept="image/jpeg,image/png,image/gif" />
+                            <small class="text-muted">Max 5MB. JPG, PNG, or GIF.</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="uploadPictureBtn">
+                            <i class="bi bi-upload"></i> Upload Picture
+                        </button>
+                    </form>
+                    <div id="uploadMessage" class="mt-2"></div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Banner Image</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3" style="height:80px;overflow:hidden;border-radius:8px;background:linear-gradient(135deg,rgba(0,82,204,0.2),rgba(0,221,85,0.1));">
+                        @if (!string.IsNullOrEmpty(Model.BannerUrl))
+                        {
+                            <img src="@Model.BannerUrl" id="bannerPreview" style="width:100%;height:80px;object-fit:cover;" alt="Banner" />
+                        }
+                        else
+                        {
+                            <div id="bannerPreview" style="width:100%;height:80px;"></div>
+                        }
+                    </div>
+                    <input type="file" class="form-control form-control-sm mb-2" id="bannerInput" accept="image/jpeg,image/png,image/gif" />
+                    <small class="text-muted d-block mb-2">Recommended: 1400×350px. Max 5MB.</small>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="uploadBannerBtn">Upload Banner</button>
+                    <div id="bannerMessage" class="mt-2"></div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Profile Completion</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 60%;" 
+                             aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">60%</div>
+                    </div>
+                    <p class="mt-2 text-muted small">
+                        Complete your profile to improve visibility to recruiters
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4" id="skills-section">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Competências</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleSkillForm()">+ Adicionar</button>
+                </div>
+                <div class="card-body">
+                    <div id="skill-list-container"><p class="text-muted small">A carregar...</p></div>
+                    <div id="add-skill-form" style="display:none;margin-top:1rem;border-top:1px solid rgba(255,255,255,0.08);padding-top:1rem;">
+                        <h6>Adicionar Competência Existente</h6>
+                        <div class="row g-2 mb-2">
+                            <div class="col">
+                                <input type="text" id="skillSearch" class="form-control form-control-sm" placeholder="Pesquisar skill..." autocomplete="off" />
+                                <div id="skillSuggestions" style="position:absolute;z-index:10;background:#141829;border:1px solid rgba(255,255,255,0.15);border-radius:8px;max-height:160px;overflow-y:auto;display:none;"></div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addSelectedSkill()">Adicionar</button>
+                            </div>
+                        </div>
+                        <hr style="border-color:rgba(255,255,255,0.08);" />
+                        <h6>Solicitar Nova Competência (com documento)</h6>
+                        <p class="text-muted small">Se a competência não existe na plataforma, podes submetê-la com um documento comprovatório. Será analisada por um administrador.</p>
+                        <div class="mb-2">
+                            <input type="text" id="newSkillName" class="form-control form-control-sm" placeholder="Nome da nova competência..." />
+                        </div>
+                        <div class="mb-2">
+                            <input type="file" id="skillDocument" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" />
+                            <small class="text-muted">PDF ou imagem, max 5MB.</small>
+                        </div>
+                        <div class="mb-2">
+                            <textarea id="skillNotes" class="form-control form-control-sm" rows="2" placeholder="Notas adicionais (opcional)..."></textarea>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="submitSkillRequest()">Submeter pedido</button>
+                        <span id="skill-req-msg" class="ms-2 small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" id="experiences-section">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Experiência Profissional</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleExpForm()">+ Adicionar</button>
+                </div>
+                <div class="card-body">
+                    <div id="exp-list-container"><p class="text-muted small">A carregar...</p></div>
+                    <div id="add-exp-form" style="display:none;margin-top:1rem;border-top:1px solid rgba(255,255,255,0.08);padding-top:1rem;">
+                        <h6>Nova Experiência</h6>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <input type="text" id="expTitle" class="form-control form-control-sm" placeholder="Cargo / Função *" required />
+                            </div>
+                            <div class="col-md-6">
+                                <select id="expCompany" class="form-select form-select-sm searchable-select" required>
+                                    <option value="">— Empresa * —</option>
+                                    @foreach (var c in (ViewBag.Companies as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.CompanyInfo> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.CompanyInfo>()))
+                                    {
+                                        <option value="@c.Name">@c.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <select id="expLocation" class="form-select form-select-sm searchable-select">
+                                    <option value="">— Localização —</option>
+                                    @foreach (var loc in (ViewBag.Locations as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>()))
+                                    {
+                                        <option value="@loc.Name">@loc.Name (@loc.CountryName)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:0.78rem;">Início *</label>
+                                <input type="date" id="expStart" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:0.78rem;">Fim (vazio = atual)</label>
+                                <input type="date" id="expEnd" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <textarea id="expDesc" class="form-control form-control-sm" rows="2" placeholder="Descrição (opcional)..."></textarea>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="saveExperience()">Guardar</button>
+                        <span id="exp-msg" class="ms-2 small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('uploadPictureBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('profilePictureInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const userId = @Model.UserId;
+            const messageDiv = document.getElementById('uploadMessage');
+            messageDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Uploading...';
+
+            try {
+                const response = await fetch(`/api/users/${userId}/upload-picture`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="alert alert-success">Picture uploaded successfully!</div>';
+                    
+                    // Update preview
+                    const preview = document.getElementById('profilePicturePreview');
+                    if (preview.tagName === 'IMG') {
+                        preview.src = result.fileUrl;
+                    } else {
+                        preview.outerHTML = `<img src="${result.fileUrl}" alt="Profile Picture" 
+                            class="img-fluid rounded-circle mb-3" style="max-width: 200px;" id="profilePicturePreview" />`;
+                    }
+                    
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                messageDiv.innerHTML = '<div class="alert alert-danger">Upload failed. Please try again.</div>';
+            }
+        });
+
+        // Banner upload
+        document.getElementById('uploadBannerBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('bannerInput');
+            const file = fileInput.files[0];
+            if (!file) { alert('Please select a banner image'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const userId = @Model.UserId;
+            const msgDiv = document.getElementById('bannerMessage');
+            msgDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Uploading...';
+
+            try {
+                const token = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ApiAccessToken='))?.split('=')[1]
+                    || localStorage.getItem('token') || '';
+                const response = await fetch(`/api/users/${userId}/upload-banner`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    msgDiv.innerHTML = '<div class="alert alert-success">Banner updated!</div>';
+                    const preview = document.getElementById('bannerPreview');
+                    preview.style.backgroundImage = '';
+                    if (preview.tagName === 'IMG') {
+                        preview.src = result.fileUrl;
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = result.fileUrl;
+                        img.id = 'bannerPreview';
+                        img.style = 'width:100%;height:80px;object-fit:cover;';
+                        img.alt = 'Banner';
+                        preview.replaceWith(img);
+                    }
+                    setTimeout(() => msgDiv.innerHTML = '', 3000);
+                } else {
+                    msgDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (err) {
+                msgDiv.innerHTML = '<div class="alert alert-danger">Upload failed. Please try again.</div>';
+            }
+        });
+    </script>
+    <script>
+    // Searchable selects – add live filter on type
+    document.querySelectorAll('.searchable-select').forEach(function(sel) {
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        sel.parentNode.insertBefore(wrapper, sel);
+        wrapper.appendChild(sel);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Search...';
+        input.className = 'form-control form-control-sm mb-1';
+        input.style.cssText = 'background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:inherit;';
+        wrapper.insertBefore(input, sel);
+
+        input.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            Array.from(sel.options).forEach(function(opt) {
+                if (!opt.value) return; // keep placeholder
+                opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    });
+
+    // Cascade location options by country selection
+    const countrySelect = document.getElementById('countrySelect');
+    const locationSelect = document.getElementById('locationSelect');
+    if (countrySelect && locationSelect) {
+        const allLocationOptions = Array.from(locationSelect.options).map(o => ({
+            value: o.value,
+            text: o.text,
+            country: o.getAttribute('data-country'),
+            selected: o.selected
+        }));
+
+        function filterLocations() {
+            const selectedCountry = countrySelect.value;
+            Array.from(locationSelect.options).forEach(function(opt) {
+                if (!opt.value) { opt.style.display = ''; return; }
+                opt.style.display = (!selectedCountry || opt.getAttribute('data-country') === selectedCountry) ? '' : 'none';
+            });
+        }
+
+        countrySelect.addEventListener('change', filterLocations);
+        filterLocations();
+    }
+    </script>
+    <script>
+    (function() {
+        var userId = @Model.UserId;
+        var token = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ApiAccessToken='))?.split('=')[1] || localStorage.getItem('token') || '';
+        var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+        var allSkills = [];
+        var selectedSkillId = null;
+
+        function getToken() {
+            return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ApiAccessToken='))?.split('=')[1] || localStorage.getItem('token') || '';
+        }
+
+        function loadSkills() {
+            fetch('/api/userskills/user/' + userId, { headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(r => r.json())
+            .then(data => {
+                var container = document.getElementById('skill-list-container');
+                if (!data.length) { container.innerHTML = '<p class="text-muted small">Nenhuma competência adicionada ainda.</p>'; return; }
+                container.innerHTML = '<div class="d-flex flex-wrap gap-2">' +
+                    data.map(s => '<span class="skill-pill" style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(0,82,204,0.08);border:1px solid rgba(0,82,204,0.3);border-radius:20px;padding:0.25rem 0.75rem;font-size:0.85rem;">' +
+                        (s.skill?.name || 'Skill') +
+                        '<button type="button" onclick="removeSkill(' + s.userSkillId + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:0;line-height:1;font-size:0.9rem;">×</button></span>').join('') +
+                    '</div>';
+            }).catch(() => { document.getElementById('skill-list-container').innerHTML = '<p class="text-muted small">Erro ao carregar competências.</p>'; });
+        }
+
+        window.removeSkill = function(id) {
+            if (!confirm('Remover esta competência?')) return;
+            fetch('/api/userskills/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(() => loadSkills());
+        };
+
+        window.toggleSkillForm = function() {
+            var f = document.getElementById('add-skill-form');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+            if (f.style.display === 'block') loadAllSkills();
+        };
+
+        function loadAllSkills() {
+            fetch('/api/skills', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(r => r.json())
+            .then(d => { allSkills = d; });
+        }
+
+        document.getElementById('skillSearch').addEventListener('input', function() {
+            var q = this.value.toLowerCase();
+            var dd = document.getElementById('skillSuggestions');
+            var filtered = allSkills.filter(s => s.name.toLowerCase().includes(q) && q.length > 0);
+            if (!filtered.length) { dd.style.display = 'none'; return; }
+            dd.style.display = 'block';
+            dd.innerHTML = filtered.slice(0,10).map(s =>
+                '<div style="padding:0.4rem 0.75rem;cursor:pointer;font-size:0.88rem;" onmousedown="selectSkill(' + s.skillId + ',\'' + s.name.replace(/'/g,"\\'") + '\')">' + s.name + '</div>').join('');
+        });
+
+        window.selectSkill = function(id, name) {
+            selectedSkillId = id;
+            document.getElementById('skillSearch').value = name;
+            document.getElementById('skillSuggestions').style.display = 'none';
+        };
+
+        window.addSelectedSkill = function() {
+            if (!selectedSkillId) { alert('Seleciona uma competência da lista.'); return; }
+            fetch('/api/userskills', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ userId: userId, skillId: selectedSkillId, endorsementCount: 0, addedAt: new Date().toISOString() })
+            }).then(r => {
+                if (r.ok || r.status === 201) { loadSkills(); selectedSkillId = null; document.getElementById('skillSearch').value = ''; }
+                else r.text().then(t => alert(t || 'Erro'));
+            });
+        };
+
+        window.submitSkillRequest = function() {
+            var name = document.getElementById('newSkillName').value.trim();
+            var file = document.getElementById('skillDocument').files[0];
+            var notes = document.getElementById('skillNotes').value.trim();
+            if (!name) { document.getElementById('skill-req-msg').textContent = 'Introduz o nome da competência.'; return; }
+            var fd = new FormData();
+            fd.append('requestedSkillName', name);
+            if (file) fd.append('document', file);
+            if (notes) fd.append('notes', notes);
+            fetch('/api/userskills/validation-request', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + getToken() },
+                body: fd
+            }).then(r => r.json().then(d => {
+                var msg = document.getElementById('skill-req-msg');
+                if (r.ok) { msg.style.color='#00DD55'; msg.textContent = d.message || 'Pedido enviado!'; }
+                else { msg.style.color='#ef4444'; msg.textContent = d.message || 'Erro ao enviar pedido.'; }
+            }));
+        };
+
+        function loadExperiences() {
+            fetch('/api/profileexperiences/user/' + userId, { headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(r => r.json())
+            .then(data => {
+                var container = document.getElementById('exp-list-container');
+                if (!data.length) { container.innerHTML = '<p class="text-muted small">Nenhuma experiência adicionada ainda.</p>'; return; }
+                container.innerHTML = '<ul class="list-unstyled mb-0">' +
+                    data.map(e => '<li style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<strong>' + (e.title||'') + '</strong>' + (e.companyName ? ' — ' + e.companyName : '') +
+                        '<span style="float:right;"><button type="button" onclick="deleteExperience(' + e.experienceId + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;">Remover</button></span>' +
+                        '<div style="font-size:0.82rem;color:#a8b2c1;">' + (e.startDate ? e.startDate.substring(0,10) : '') + ' → ' + (e.endDate ? e.endDate.substring(0,10) : 'Atualmente') + '</div>' +
+                        (e.description ? '<div style="font-size:0.82rem;margin-top:0.25rem;">' + e.description + '</div>' : '') +
+                        '</li>').join('') +
+                    '</ul>';
+            }).catch(() => { document.getElementById('exp-list-container').innerHTML = '<p class="text-muted small">Erro ao carregar experiências.</p>'; });
+        }
+
+        window.toggleExpForm = function() {
+            var f = document.getElementById('add-exp-form');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+        };
+
+        window.saveExperience = function() {
+            var title = document.getElementById('expTitle').value.trim();
+            var company = document.getElementById('expCompany').value.trim();
+            var location = document.getElementById('expLocation').value.trim();
+            var start = document.getElementById('expStart').value;
+            var end = document.getElementById('expEnd').value;
+            var desc = document.getElementById('expDesc').value.trim();
+            var msg = document.getElementById('exp-msg');
+            if (!title || !company || !start) { msg.style.color='#ef4444'; msg.textContent = 'Cargo, empresa e data de início são obrigatórios.'; return; }
+            fetch('/api/profileexperiences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({
+                    userId: userId, title: title, companyName: company,
+                    location: location || null, startDate: start,
+                    endDate: end || null, isCurrent: !end,
+                    description: desc || null
+                })
+            }).then(r => {
+                if (r.ok || r.status === 201) {
+                    msg.style.color='#00DD55'; msg.textContent = 'Experiência adicionada!';
+                    loadExperiences();
+                    document.getElementById('expTitle').value=''; document.getElementById('expCompany').value='';
+                    document.getElementById('expLocation').value=''; document.getElementById('expStart').value='';
+                    document.getElementById('expEnd').value=''; document.getElementById('expDesc').value='';
+                } else r.text().then(t => { msg.style.color='#ef4444'; msg.textContent = t || 'Erro'; });
+            });
+        };
+
+        window.deleteExperience = function(id) {
+            if (!confirm('Remover esta experiência?')) return;
+            fetch('/api/profileexperiences/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(() => loadExperiences());
+        };
+
+        loadSkills();
+        loadExperiences();
+    })();
+    </script>
+}
+

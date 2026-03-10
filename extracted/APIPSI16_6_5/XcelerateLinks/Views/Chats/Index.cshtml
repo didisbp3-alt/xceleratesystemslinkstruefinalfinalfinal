@@ -1,0 +1,40 @@
+@model IEnumerable<Chat>
+@{
+    ViewData["Title"] = "Conversas";
+}
+
+<h2 class="mb-3">Conversas</h2>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
+}
+
+<div class="mb-3">
+    <a asp-action="Create" class="btn btn-primary">Nova conversa</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Tipo</th>
+            <th>Criado em</th>
+            <th>Criado por</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var chat in Model)
+    {
+        <tr>
+            <td>@chat.Type</td>
+            <td>@(chat.CreatedAt?.ToString("g") ?? "-")</td>
+            <td>@chat.CreatedByUserId</td>
+            <td class="text-end">
+                <a asp-action="Details" asp-route-id="@chat.ChatId" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                <a asp-action="Delete" asp-route-id="@chat.ChatId" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

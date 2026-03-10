@@ -1,0 +1,8 @@
+*.zip
+extracted/
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+**/node_modules/

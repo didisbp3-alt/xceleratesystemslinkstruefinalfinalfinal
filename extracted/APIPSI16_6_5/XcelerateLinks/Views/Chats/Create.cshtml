@@ -1,0 +1,193 @@
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Nova Conversa";
+    var users = ViewBag.Users as IEnumerable<APIPSI16.Models.DTOs.UserDTO> ?? Enumerable.Empty<APIPSI16.Models.DTOs.UserDTO>();
+    var preselected = ViewBag.PreselectedUserId as int?;
+    var currentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+}
+
+<style>
+    .newchat-container { max-width: 640px; margin: 0 auto; padding: 2rem 0; }
+    .newchat-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.75rem; animation: fadeUp 0.35s ease both; }
+    .newchat-card h2 { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .newchat-card .subtitle { font-size: 0.85rem; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 1.5rem; }
+
+    .user-search { margin-bottom: 1rem; }
+    .user-search input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 0.55rem 0.9rem; color: inherit; font-size: 0.9rem; outline: none; }
+    .user-search input:focus { border-color: #0052CC; }
+
+    .people-picker { max-height: 340px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; }
+    .picker-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; cursor: pointer; transition: background 0.12s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .picker-item:last-child { border-bottom: none; }
+    .picker-item:hover { background: rgba(255,255,255,0.04); }
+    .picker-item.selected { background: rgba(0,82,204,0.1); }
+    .picker-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,#0052CC,#00DD55); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #fff; }
+    .picker-avatar img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+    .picker-meta { flex: 1; min-width: 0; }
+    .picker-name { font-size: 0.88rem; font-weight: 600; }
+    .picker-bio { font-size: 0.74rem; color: var(--dark-text-muted,#a8b2c1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .picker-check { width: 18px; height: 18px; accent-color: #0052CC; }
+
+    .selected-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 24px; margin-bottom: 1rem; }
+    .selected-pill { background: rgba(0,82,204,0.15); border: 1px solid rgba(0,82,204,0.3); border-radius: 30px; padding: 0.25rem 0.7rem 0.25rem 0.55rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.35rem; color: #4f8ef7; }
+    .selected-pill button { background: none; border: none; color: #4f8ef7; cursor: pointer; padding: 0; font-size: 0.85rem; line-height: 1; }
+
+    .chat-name-row { margin-top: 1rem; }
+    .chat-name-row label { font-size: 0.85rem; font-weight: 600; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.4rem; display: block; }
+    .chat-name-row input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 0.55rem 0.9rem; color: inherit; font-size: 0.9rem; outline: none; }
+    .chat-name-row input:focus { border-color: #0052CC; }
+
+    .btn-start { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.65rem 2rem; font-size: 0.95rem; font-weight: 600; transition: background 0.15s, transform 0.1s; margin-top: 1.25rem; }
+    .btn-start:hover { background: #0040A0; transform: translateY(-1px); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 30px; padding: 0.65rem 1.5rem; font-size: 0.95rem; text-decoration: none; display: inline-block; margin-top: 1.25rem; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.05); color: inherit; }
+
+    .no-users { text-align: center; padding: 2rem; color: var(--dark-text-muted,#a8b2c1); font-size: 0.88rem; }
+</style>
+
+<div class="container py-4">
+    <div class="newchat-container">
+        <a asp-action="Messages" class="btn btn-sm btn-outline-secondary mb-4">← Mensagens</a>
+
+        <div class="newchat-card">
+            <h2>💬 Nova Conversa</h2>
+            <p class="subtitle">Seleciona as pessoas com quem queres iniciar uma conversa.</p>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger">@ViewBag.Error</div>
+            }
+
+            <div class="user-search">
+                <input type="text" id="userSearch" placeholder="Pesquisar utilizadores..." autocomplete="off" />
+            </div>
+
+            <!-- Selected pills -->
+            <div class="selected-pills" id="selectedPills"></div>
+
+            <form asp-action="Create" method="post" id="createChatForm">
+                @Html.AntiForgeryToken()
+                <div id="hidden-inputs"></div>
+
+                <!-- People picker -->
+                <div class="people-picker" id="peoplePicker">
+                    @if (!users.Any())
+                    {
+                        <div class="no-users">Nenhum utilizador disponível.</div>
+                    }
+                    else
+                    {
+                        @foreach (var u in users)
+                        {
+                            var initials = string.IsNullOrWhiteSpace(u.Name) ? "?" :
+                                (u.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                                    ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper())
+                                    : "?");
+                            <div class="picker-item" data-uid="@u.UserId" data-name="@(u.Name ?? "Utilizador")"
+                                 data-bio="@(u.ProfileBio ?? "")" onclick="toggleUser(this)">
+                                <div class="picker-avatar">
+                                    @if (!string.IsNullOrEmpty(u.ProfilePictureUrl))
+                                    {
+                                        <img src="@u.ProfilePictureUrl" alt="@u.Name" />
+                                    }
+                                    else
+                                    {
+                                        @initials
+                                    }
+                                </div>
+                                <div class="picker-meta">
+                                    <div class="picker-name">@(u.Name ?? "Utilizador")</div>
+                                    <div class="picker-bio">@(u.ProfileBio ?? "Sem descrição.")</div>
+                                </div>
+                                <input type="checkbox" class="picker-check" data-uid="@u.UserId"
+                                       @(preselected.HasValue && preselected.Value == u.UserId ? "checked" : "") />
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="chat-name-row" id="chatNameRow" style="display:none;">
+                    <label for="chatName">Nome da conversa (opcional, para grupos)</label>
+                    <input type="text" id="chatName" name="chatName" placeholder="Ex: Equipa de Projeto..." maxlength="80" />
+                </div>
+
+                <div class="d-flex gap-3 align-items-center flex-wrap">
+                    <button type="submit" class="btn-start" id="btnStart" disabled>Iniciar conversa</button>
+                    <a asp-action="Messages" class="btn-cancel">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const selectedUsers = new Map(); // uid → name
+const preselected = @Html.Raw(preselected.HasValue ? preselected.Value.ToString() : "null");
+
+function toggleUser(row) {
+    const uid = parseInt(row.dataset.uid);
+    const name = row.dataset.name;
+    const cb = row.querySelector('.picker-check');
+    if (selectedUsers.has(uid)) {
+        selectedUsers.delete(uid);
+        cb.checked = false;
+        row.classList.remove('selected');
+    } else {
+        selectedUsers.set(uid, name);
+        cb.checked = true;
+        row.classList.add('selected');
+    }
+    renderPills();
+    updateHiddens();
+    updateBtn();
+}
+
+function renderPills() {
+    const container = document.getElementById('selectedPills');
+    container.innerHTML = '';
+    selectedUsers.forEach((name, uid) => {
+        const pill = document.createElement('div');
+        pill.className = 'selected-pill';
+        pill.innerHTML = `${name}<button type="button" onclick="removeUser(${uid})">✕</button>`;
+        container.appendChild(pill);
+    });
+    document.getElementById('chatNameRow').style.display = selectedUsers.size > 1 ? 'block' : 'none';
+}
+
+function removeUser(uid) {
+    selectedUsers.delete(uid);
+    const row = document.querySelector(`.picker-item[data-uid="${uid}"]`);
+    if (row) { row.classList.remove('selected'); row.querySelector('.picker-check').checked = false; }
+    renderPills(); updateHiddens(); updateBtn();
+}
+
+function updateHiddens() {
+    const container = document.getElementById('hidden-inputs');
+    container.innerHTML = '';
+    selectedUsers.forEach((_, uid) => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'participantIds'; inp.value = uid;
+        container.appendChild(inp);
+    });
+}
+
+function updateBtn() {
+    document.getElementById('btnStart').disabled = selectedUsers.size === 0;
+}
+
+// Preselect if withUserId was passed
+if (preselected) {
+    const row = document.querySelector(`.picker-item[data-uid="${preselected}"]`);
+    if (row) toggleUser(row);
+}
+
+// Search filter
+document.getElementById('userSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.picker-item').forEach(row => {
+        const name = (row.dataset.name || '').toLowerCase();
+        const bio = (row.dataset.bio || '').toLowerCase();
+        row.style.display = (name.includes(q) || bio.includes(q)) ? '' : 'none';
+    });
+});
+</script>

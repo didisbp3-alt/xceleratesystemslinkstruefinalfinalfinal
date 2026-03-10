@@ -1,0 +1,121 @@
+@using System.Security.Claims
+@using APIPSI16.Models.DTOs
+@inject XcelerateLinks.Mvc.Services.IUsersApiClient UsersApiClient
+@inject Microsoft.Extensions.Logging.ILoggerFactory LoggerFactory
+
+@functions {
+    public static string GetInitials(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "?";
+        var parts = fullName!.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpperInvariant();
+        return (parts[0].Substring(0, 1) + parts[^1].Substring(0, 1)).ToUpperInvariant();
+    }
+}
+
+@{
+    var logger = LoggerFactory.CreateLogger("UserMenu");
+    CurrentUserDto? user = null;
+
+    try
+    {
+        user = await UsersApiClient.GetCurrentUserAsync();
+    }
+    catch (Exception ex)
+    {
+        logger.LogDebug(ex, "UsersApiClient.GetCurrentUserAsync threw an exception.");
+        user = null;
+    }
+
+    // Fallback to claims if API didn't return a user
+    if (user == null && ViewContext?.HttpContext?.User?.Identity?.IsAuthenticated == true)
+    {
+        try
+        {
+            var principal = ViewContext.HttpContext.User;
+            var name = principal.FindFirst(ClaimTypes.Name)?.Value ?? principal.Identity?.Name;
+            var email = principal.FindFirst(ClaimTypes.Email)?.Value;
+            var avatar = principal.FindFirst("picture")?.Value ?? principal.FindFirst("avatar")?.Value;
+
+            user = new CurrentUserDto
+            {
+                FullName = name ?? "Usuário",
+                Email = email ?? string.Empty,
+                AvatarUrl = avatar
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Error building user from claims.");
+            user = null;
+        }
+    }
+}
+
+@if (user != null)
+{
+    <div class="user-pill dropdown">
+        <a class="user-pill-toggle d-inline-flex align-items-center text-decoration-none dropdown-toggle" href="#" id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+            {
+                <img src="@user.AvatarUrl" alt="Avatar of @user.FullName" class="avatar-img" />
+            }
+            else
+            {
+                <span class="avatar-initials">@GetInitials(user.FullName)</span>
+            }
+
+            <div class="user-meta ms-2 d-none d-sm-flex flex-column">
+                <span class="user-name">@user.FullName</span>
+                <small class="user-email text-muted">@user.Email</small>
+            </div>
+        </a>
+
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+            <li>
+                <a class="dropdown-item" asp-controller ="Users" asp-action="Profile">
+                    <span class="me-2">👤</span>Perfil
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <!-- navigation links pulled into the dropdown -->
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Opportunities")"><span class="me-2">💼</span>Oportunidades</a></li>
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Users")"><span class="me-2">👥</span>Rede</a></li>
+            @{
+                var userRole = ViewContext.HttpContext.User?.FindFirst(ClaimTypes.Role)?.Value;
+            }
+            @if (userRole != "0")
+            {
+                <li><a class="dropdown-item" href="@Url.Action("Index", "Connections")">🤝 Ligações</a></li>
+            }
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Chats")"><span class="me-2">💬</span>Mensagens</a></li>
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Applications")"><span class="me-2">📝</span>Candidaturas</a></li>
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Companies")"><span class="me-2">🏢</span>Empresas</a></li>
+            <li><a class="dropdown-item" href="@Url.Action("Index", "Subscriptions")"><span class="me-2">💎</span>Subscrição</a></li>
+            @if (userRole == "0")
+            {
+                <li><a class="dropdown-item" href="@Url.Action("Profit", "Home")"><span class="me-2">💰</span>Receita</a></li>
+            }   
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <li>
+                <form method="post" asp-controller="Account" asp-action="Logout" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="dropdown-item text-danger">
+                        <span class="me-2">⎋</span>Sair
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+}
+else
+{
+    <div class="user-menu guest d-flex align-items-center gap-2">
+        <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Login", "Auth")">Entrar</a>
+        <a class="btn btn-sm btn-primary" href="@Url.Action("Register", "Auth")">Registar</a>
+    </div>
+}

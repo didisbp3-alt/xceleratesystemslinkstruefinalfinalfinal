@@ -1,0 +1,251 @@
+@{
+    ViewData["Title"] = "Planos de Subscrição";
+    var currentPlan = ViewBag.SubscriptionPlan as int? ?? 0;
+    var userId = ViewBag.UserId as int? ?? 0;
+    string PlanName(int p) => p switch { 0 => "Free", 1 => "Pro", 2 => "Enterprise", _ => "Free" };
+}
+
+<style>
+    .sub-page { max-width: 1100px; margin: 0 auto; padding: 3rem 1rem 4rem; }
+    .sub-hero { text-align: center; margin-bottom: 3rem; }
+    .sub-hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .sub-hero p { font-size: 1.05rem; color: var(--dark-text-muted, #a8b2c1); max-width: 520px; margin: 0 auto; }
+
+    .plans-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @@media (max-width: 768px) { .plans-grid { grid-template-columns: 1fr; } }
+    @@media (max-width: 1024px) and (min-width: 769px) { .plans-grid { grid-template-columns: 1fr 1fr; } }
+
+    .plan-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 18px;
+        padding: 2rem 1.75rem;
+        display: flex; flex-direction: column;
+        transition: transform 0.18s, border-color 0.18s;
+        position: relative;
+    }
+    .plan-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.18); }
+    .plan-card.featured {
+        border-color: rgba(0,82,204,0.5);
+        background: rgba(0,82,204,0.07);
+        box-shadow: 0 0 0 1px rgba(0,82,204,0.3), 0 8px 32px rgba(0,82,204,0.12);
+    }
+
+    .plan-badge {
+        position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+        background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase; border-radius: 20px;
+        padding: 0.2rem 0.9rem; white-space: nowrap;
+    }
+
+    .plan-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .plan-name { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .plan-tagline { font-size: 0.85rem; color: var(--dark-text-muted, #a8b2c1); margin-bottom: 1.5rem; }
+
+    .plan-price { display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem; }
+    .price-amount { font-size: 2.4rem; font-weight: 800; }
+    .price-period { font-size: 0.85rem; color: var(--dark-text-muted, #a8b2c1); }
+    .price-note { font-size: 0.75rem; color: var(--dark-text-muted, #a8b2c1); margin-bottom: 1.75rem; }
+
+    .plan-features { list-style: none; padding: 0; margin: 0 0 2rem; flex: 1; }
+    .plan-features li { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.88rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .plan-features li:last-child { border-bottom: none; }
+    .feat-icon { flex-shrink: 0; font-size: 0.95rem; margin-top: 0.05rem; }
+    .feat-off { color: #6b7280; }
+
+    .btn-plan {
+        display: block; text-align: center; border-radius: 30px;
+        padding: 0.75rem 1.5rem; font-size: 0.92rem; font-weight: 600;
+        text-decoration: none; cursor: pointer; border: none;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .btn-plan:hover { transform: translateY(-1px); text-decoration: none; }
+    .btn-plan-free { background: rgba(255,255,255,0.07); color: inherit; border: 1px solid rgba(255,255,255,0.14); }
+    .btn-plan-free:hover { background: rgba(255,255,255,0.11); color: inherit; }
+    .btn-plan-pro { background: #0052CC; color: #fff; }
+    .btn-plan-pro:hover { background: #0040A0; color: #fff; }
+    .btn-plan-ent { background: linear-gradient(135deg, #0052CC, #00DD55); color: #fff; }
+    .btn-plan-ent:hover { opacity: 0.9; color: #fff; }
+
+    .coming-soon-banner {
+        background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+        border-radius: 12px; padding: 0.85rem 1.25rem;
+        text-align: center; font-size: 0.88rem; color: #f59e0b;
+        margin-bottom: 2.5rem;
+    }
+
+    .faq-section { margin-top: 4rem; }
+    .faq-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+    .faq-item { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 1.1rem 0; }
+    .faq-q { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .faq-a { font-size: 0.88rem; color: var(--dark-text-muted, #a8b2c1); line-height: 1.6; }
+</style>
+
+<div class="sub-page">
+    <div class="sub-hero">
+        <h1>💎 Planos &amp; Preços</h1>
+        <p>Escolhe o plano que melhor se adequa ao teu perfil — começa grátis e cresce com as tuas necessidades.</p>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-warning mb-3">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="coming-soon-banner">
+        ⚡ Plano atual: <strong>@PlanName(currentPlan)</strong> — Os pagamentos ainda estão a ser configurados. Podes mudar de plano livremente por enquanto!
+    </div>
+
+    <div class="plans-grid">
+
+        <!-- FREE -->
+        <div class="plan-card @(currentPlan == 0 ? "current-plan" : "")">
+            @if (currentPlan == 0) { <div class="plan-badge" style="background:#059669;">✓ Plano atual</div> }
+            <div class="plan-icon">🌱</div>
+            <div class="plan-name">Free</div>
+            <div class="plan-tagline">Para quem está a começar</div>
+            <div class="plan-price">
+                <span class="price-amount">€0</span>
+                <span class="price-period">/ mês</span>
+            </div>
+            <div class="price-note">Sempre gratuito</div>
+            <ul class="plan-features">
+                <li><span class="feat-icon">✅</span> Perfil profissional público</li>
+                <li><span class="feat-icon">✅</span> Candidatura a vagas (<strong>até 5/mês</strong>)</li>
+                <li><span class="feat-icon">✅</span> Rede de ligações (<strong>até 50</strong>)</li>
+                <li><span class="feat-icon">✅</span> Mensagens (<strong>até 20/mês</strong>)</li>
+                <li><span class="feat-icon">✅</span> Explorar empresas e oportunidades</li>
+                <li><span class="feat-icon feat-off">✗</span><span class="feat-off">Candidaturas ilimitadas</span></li>
+                <li><span class="feat-icon feat-off">✗</span><span class="feat-off">Destaque no perfil</span></li>
+                <li><span class="feat-icon feat-off">✗</span><span class="feat-off">Estatísticas avançadas</span></li>
+            </ul>
+            @if (currentPlan == 0)
+            {
+                <button type="button" class="btn-plan btn-plan-free" disabled>✓ Plano atual</button>
+            }
+            else
+            {
+                <form asp-action="Upgrade" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="plan" value="0" />
+                    <button type="submit" class="btn-plan btn-plan-free">Mudar para Free</button>
+                </form>
+            }
+        </div>
+
+        <!-- PRO -->
+        <div class="plan-card featured @(currentPlan == 1 ? "current-plan" : "")">
+            @if (currentPlan == 1) { <div class="plan-badge" style="background:#059669;">✓ Plano atual</div> }
+            else { <div class="plan-badge">✨ Mais popular</div> }
+            <div class="plan-icon">🚀</div>
+            <div class="plan-name">Pro</div>
+            <div class="plan-tagline">Para profissionais sérios</div>
+            <div class="plan-price">
+                <span class="price-amount">€9</span>
+                <span class="price-period">/ mês</span>
+            </div>
+            <div class="price-note">Faturado mensalmente · cancela quando quiseres</div>
+            <ul class="plan-features">
+                <li><span class="feat-icon">✅</span> Tudo do plano Free</li>
+                <li><span class="feat-icon">✅</span> <strong>Candidaturas ilimitadas</strong></li>
+                <li><span class="feat-icon">✅</span> <strong>Ligações ilimitadas</strong></li>
+                <li><span class="feat-icon">✅</span> <strong>Mensagens ilimitadas</strong></li>
+                <li><span class="feat-icon">✅</span> Perfil em destaque nos resultados</li>
+                <li><span class="feat-icon">✅</span> Ver quem visitou o teu perfil</li>
+                <li><span class="feat-icon">✅</span> Alertas de vagas personalizados</li>
+                <li><span class="feat-icon feat-off">✗</span><span class="feat-off">Gestão de empresa (Employer)</span></li>
+            </ul>
+            @if (currentPlan == 1)
+            {
+                <button type="button" class="btn-plan btn-plan-pro" disabled>✓ Plano atual</button>
+            }
+            else
+            {
+                <form asp-action="Upgrade" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="plan" value="1" />
+                    <button type="submit" class="btn-plan btn-plan-pro">Começar Pro</button>
+                </form>
+            }
+        </div>
+
+        <!-- ENTERPRISE -->
+        <div class="plan-card @(currentPlan == 2 ? "current-plan" : "")">
+            @if (currentPlan == 2) { <div class="plan-badge" style="background:#059669;">✓ Plano atual</div> }
+            <div class="plan-icon">🏢</div>
+            <div class="plan-name">Enterprise</div>
+            <div class="plan-tagline">Para empresas que recrutam</div>
+            <div class="plan-price">
+                <span class="price-amount">€29</span>
+                <span class="price-period">/ mês</span>
+            </div>
+            <div class="price-note">Por empresa · inclui até 5 membros de equipa</div>
+            <ul class="plan-features">
+                <li><span class="feat-icon">✅</span> Tudo do plano Pro</li>
+                <li><span class="feat-icon">✅</span> Página de empresa verificada</li>
+                <li><span class="feat-icon">✅</span> <strong>Vagas ilimitadas</strong></li>
+                <li><span class="feat-icon">✅</span> Pipeline de candidaturas completo</li>
+                <li><span class="feat-icon">✅</span> Equipa de recrutamento (5 membros)</li>
+                <li><span class="feat-icon">✅</span> Análise de candidatos com IA</li>
+                <li><span class="feat-icon">✅</span> Exportação de candidaturas (CSV)</li>
+                <li><span class="feat-icon">✅</span> Suporte prioritário</li>
+            </ul>
+            @if (currentPlan == 2)
+            {
+                <button type="button" class="btn-plan btn-plan-ent" disabled>✓ Plano atual</button>
+            }
+            else
+            {
+                <form asp-action="Upgrade" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="plan" value="2" />
+                    <button type="submit" class="btn-plan btn-plan-ent">Ativar Enterprise</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq-section">
+        <div class="faq-title">Perguntas frequentes</div>
+        <div class="faq-item">
+            <div class="faq-q">Quando é que os pagamentos ficam disponíveis?</div>
+            <div class="faq-a">Estamos a trabalhar na integração de pagamentos. Assim que estiver pronto, todos os utilizadores serão notificados. Enquanto isso, todos os planos são gratuitos!</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Posso cancelar a qualquer altura?</div>
+            <div class="faq-a">Sim. Quando os pagamentos estiverem disponíveis, poderás cancelar a tua subscrição a qualquer momento sem qualquer penalização.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">O meu plano Free inclui acesso completo agora?</div>
+            <div class="faq-a">Sim! Enquanto os pagamentos não estiverem ativos, todos os utilizadores têm acesso a todas as funcionalidades sem restrições.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Preciso de cartão de crédito para me registar?</div>
+            <div class="faq-a">Não. O registo é completamente gratuito e não requer dados de pagamento.</div>
+        </div>
+    </div>
+</div>
+
+<div id="coming-soon-toast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:rgba(20,24,41,0.95);border:1px solid rgba(0,82,204,0.4);color:#fff;border-radius:12px;padding:0.85rem 1.5rem;font-size:0.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+    ⚡ Pagamentos em breve — a mudança de plano é gratuita durante o período de testes!
+</div>
+
+@section Scripts {
+    <script>
+        function showComingSoon() {
+            var t = document.getElementById('coming-soon-toast');
+            t.style.display = 'block';
+            setTimeout(function() { t.style.display = 'none'; }, 3000);
+        }
+    </script>
+}

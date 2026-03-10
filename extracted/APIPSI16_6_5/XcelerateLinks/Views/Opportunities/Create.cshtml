@@ -1,0 +1,223 @@
+@model APIPSI16.Models.Opportunity
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Criar oportunidade";
+    var companies = ViewBag.Companies as IEnumerable<XcelerateLinks.Mvc.Controllers.OpportunitiesController.CompanyDropItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.OpportunitiesController.CompanyDropItem>();
+    var users = ViewBag.Users as IEnumerable<APIPSI16.Models.DTOs.UserDTO> ?? Enumerable.Empty<APIPSI16.Models.DTOs.UserDTO>();
+    var jobRoles = ViewBag.JobRoles as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+    var locations = ViewBag.Locations as IEnumerable<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem> ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.UsersController.LookupItem>();
+    var isEmployer = ViewBag.IsEmployer == true;
+    var isAdmin = User.FindFirst(ClaimTypes.Role)?.Value == "0";
+    var employmentTypes = new Dictionary<byte, string> { {1,"Full-Time"},{2,"Part-Time"},{3,"Contract"},{4,"Internship"},{5,"Freelance"} };
+    var remoteOptions = new Dictionary<byte, string> { {0,"No local"},{1,"Híbrido"},{2,"Remoto"} };
+    var seniorityLevels = new Dictionary<byte, string> { {1,"Junior"},{2,"Mid-level"},{3,"Senior"},{4,"Lead"},{5,"Manager"} };
+    var opportunityTypes = new Dictionary<byte, string> { {0,"Candidatura Padrão"},{1,"Candidatura Acompanhada 🟡"},{2,"Longa Duração (com testes) 🔵"} };
+    var applicationScopes = new Dictionary<byte, string> { {0,"Externa (fora da empresa)"},{1,"Interna (talento interno)"},{2,"Mista (interno + externo)"} };
+}
+
+<style>
+    .opp-create-container { max-width: 700px; margin: 0 auto; padding: 2rem 0; }
+    .opp-form-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 2rem; }
+    .opp-form-card h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 1.5rem; }
+    .form-group-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @@media(max-width:600px) { .form-group-row { grid-template-columns: 1fr; } }
+    .form-label-styled { font-size: 0.85rem; font-weight: 600; color: var(--dark-text-muted,#a8b2c1); margin-bottom: 0.4rem; }
+    .form-control-styled, .form-select-styled {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+        color: inherit; padding: 0.55rem 0.85rem; width: 100%; font-size: 0.9rem;
+    }
+    .form-control-styled:focus, .form-select-styled:focus { border-color: #0052CC; outline: none; box-shadow: none; background: rgba(255,255,255,0.08); color: inherit; }
+    .form-select-styled option { background: #141829; }
+    .btn-save-opp { background: #0052CC; color: #fff; border: none; border-radius: 30px; padding: 0.65rem 2rem; font-size: 0.95rem; font-weight: 600; }
+    .btn-save-opp:hover { background: #0040A0; }
+    .btn-cancel-opp { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit; border-radius: 30px; padding: 0.65rem 1.5rem; font-size: 0.95rem; text-decoration: none; display: inline-block; }
+    .btn-cancel-opp:hover { background: rgba(255,255,255,0.05); color: inherit; }
+</style>
+
+<div class="container py-4">
+    <div class="opp-create-container">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-4">← Oportunidades</a>
+
+        <div class="opp-form-card">
+            <h2>+ Criar Oportunidade</h2>
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label form-label-styled">Título da vaga *</label>
+                    <input asp-for="Title" class="form-control form-control-styled" placeholder="Ex: Software Engineer, Product Manager..." />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CompanyId" class="form-label form-label-styled">Empresa *</label>
+                    <select asp-for="CompanyId" class="form-select form-select-styled">
+                        <option value="">Seleciona uma empresa...</option>
+                        @foreach (var c in companies)
+                        {
+                            <option value="@c.CompanyId">@(c.CompanyName ?? $"Empresa #{c.CompanyId}")</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CompanyId" class="text-danger"></span>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <div class="mb-3">
+                        <label asp-for="CreatorId" class="form-label form-label-styled">Criador</label>
+                        <select asp-for="CreatorId" class="form-select form-select-styled">
+                            <option value="">Seleciona um utilizador...</option>
+                            @foreach (var u in users)
+                            {
+                                <option value="@u.UserId">@(u.Name ?? u.Email ?? $"Utilizador #{u.UserId}")</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CreatorId" class="text-danger"></span>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="CreatorId" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="LocationId" class="form-label form-label-styled">Localização</label>
+                    <select asp-for="LocationId" class="form-select form-select-styled" id="locationSelect">
+                        <option value="">Seleciona uma localização...</option>
+                        @foreach (var loc in locations)
+                        {
+                            <option value="@loc.LocationId">@loc.Name (@loc.CountryName)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="LocationId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group-row mb-3">
+                    <div>
+                        <label asp-for="EmploymentType" class="form-label form-label-styled">Tipo de emprego</label>
+                        <select asp-for="EmploymentType" class="form-select form-select-styled">
+                            <option value="">Seleciona...</option>
+                            @foreach (var kv in employmentTypes)
+                            {
+                                <option value="@kv.Key">@kv.Value</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label asp-for="RemoteOption" class="form-label form-label-styled">Modalidade</label>
+                        <select asp-for="RemoteOption" class="form-select form-select-styled">
+                            <option value="">Seleciona...</option>
+                            @foreach (var kv in remoteOptions)
+                            {
+                                <option value="@kv.Key">@kv.Value</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="SeniorityLevel" class="form-label form-label-styled">Nível de senioridade</label>
+                    <select asp-for="SeniorityLevel" class="form-select form-select-styled">
+                        <option value="">Seleciona...</option>
+                        @foreach (var kv in seniorityLevels)
+                        {
+                            <option value="@kv.Key">@kv.Value</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group-row mb-3">
+                    <div>
+                        <label asp-for="OpportunityType" class="form-label form-label-styled">Tipo de candidatura</label>
+                        <select asp-for="OpportunityType" class="form-select form-select-styled">
+                            <option value="">Seleciona...</option>
+                            @foreach (var kv in opportunityTypes)
+                            {
+                                <option value="@kv.Key">@kv.Value</option>
+                            }
+                        </select>
+                        <small style="font-size:0.75rem;color:#a8b2c1;">🟡 Acompanhada: entrevista ao vivo durante candidatura. 🔵 Longa duração: testes pré-preparados pelo empregador.</small>
+                    </div>
+                    <div>
+                        <label asp-for="ApplicationScope" class="form-label form-label-styled">Âmbito das candidaturas</label>
+                        <select asp-for="ApplicationScope" class="form-select form-select-styled">
+                            <option value="">Seleciona...</option>
+                            @foreach (var kv in applicationScopes)
+                            {
+                                <option value="@kv.Key">@kv.Value</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label form-label-styled">Áreas de trabalho</label>
+                    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:0.75rem;max-height:200px;overflow-y:auto;">
+                        @if (!jobRoles.Any())
+                        {
+                            <p style="font-size:0.82rem;color:#a8b2c1;margin:0;">Sem áreas disponíveis</p>
+                        }
+                        else
+                        {
+                            var selectedRoleIds = new HashSet<string>(
+                                (Model?.RequiredJobRoleIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries));
+                            @foreach (var jr in jobRoles)
+                            {
+                                <label style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;cursor:pointer;font-size:0.88rem;">
+                                    <input type="checkbox" name="SelectedJobRoleIds" value="@jr.Id"
+                                        style="accent-color:#0052CC;"
+                                        @(selectedRoleIds.Contains(jr.Id.ToString()) ? "checked" : "") />
+                                    @jr.Name
+                                </label>
+                            }
+                        }
+                    </div>
+                    <input type="hidden" asp-for="RequiredJobRoleIds" id="reqJobRoleIds" />
+                </div>
+
+                <div class="d-flex gap-3 align-items-center">
+                    <button type="submit" class="btn-save-opp">Criar oportunidade</button>
+                    <a asp-action="Index" class="btn-cancel-opp">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+(function() {
+    var form = document.querySelector('form');
+    var hiddenInput = document.getElementById('reqJobRoleIds');
+    if (form && hiddenInput) {
+        form.addEventListener('submit', function() {
+            var checked = Array.from(document.querySelectorAll('input[name="SelectedJobRoleIds"]:checked')).map(function(el){ return el.value; });
+            hiddenInput.value = checked.join(',');
+        });
+    }
+})();
+</script>
+<script>
+// Add searchable filter above location select
+(function() {
+    var sel = document.getElementById('locationSelect');
+    if (!sel) return;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Pesquisar localização...';
+    input.className = 'form-control form-control-styled mb-1';
+    input.style.cssText = 'font-size:0.85rem;';
+    sel.parentNode.insertBefore(input, sel);
+    input.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        Array.from(sel.options).forEach(function(opt) {
+            if (!opt.value) { opt.style.display = ''; return; }
+            opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+})();
+</script>
+}

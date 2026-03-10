@@ -1,0 +1,174 @@
+@model IEnumerable<XcelerateLinks.Mvc.Controllers.EmployerContactsController.ContactRow>
+@using System.Security.Claims
+@{
+    ViewData["Title"] = ViewBag.PageTitle ?? "Contactos Anteriores";
+    var companyId = (int)ViewBag.CompanyId;
+    var opportunityId = ViewBag.OpportunityId as int?;
+    var matches = ViewBag.Matches as IEnumerable<XcelerateLinks.Mvc.Controllers.EmployerContactsController.MatchRow>
+        ?? Enumerable.Empty<XcelerateLinks.Mvc.Controllers.EmployerContactsController.MatchRow>();
+    var hasMatches = matches.Any();
+}
+
+<style>
+    .contacts-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.75rem; }
+    .contacts-header h1 { font-size:1.5rem; font-weight:800; margin:0; }
+
+    .contact-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius:14px;
+        padding:1rem 1.25rem; margin-bottom:0.75rem;
+        display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+    }
+    .contact-card:hover { border-color: rgba(0,82,204,0.3); }
+
+    .contact-avatar { width:46px; height:46px; border-radius:50%; flex-shrink:0;
+        background: linear-gradient(135deg,#0052CC,#00DD55);
+        display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:700; color:#fff; }
+    .contact-avatar img { width:46px; height:46px; border-radius:50%; object-fit:cover; }
+
+    .contact-info { flex:1; min-width:140px; }
+    .contact-name { font-weight:700; font-size:0.95rem; }
+    .contact-meta { font-size:0.78rem; color:#a8b2c1; margin-top:0.15rem; }
+
+    .contact-badge { border-radius:20px; padding:0.2rem 0.65rem; font-size:0.75rem; font-weight:600; border:1px solid; }
+    .badge-available { border-color:rgba(0,221,85,0.35); color:#00DD55; background:rgba(0,221,85,0.07); }
+    .badge-score { border-color:rgba(0,82,204,0.4); color:#4f8ef7; background:rgba(0,82,204,0.08); }
+    .badge-outcome { border-color:rgba(255,255,255,0.15); color:#a8b2c1; background:transparent; }
+
+    .contact-actions { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+    .priority-input { width:70px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:inherit; padding:0.3rem 0.5rem; font-size:0.82rem; }
+    .btn-sm-action { border-radius:20px; padding:0.25rem 0.75rem; font-size:0.78rem; border:1px solid; cursor:pointer; background:transparent; }
+    .btn-save-priority { border-color:rgba(0,82,204,0.5); color:#4f8ef7; }
+    .btn-save-priority:hover { background:rgba(0,82,204,0.1); }
+    .btn-discard { border-color:rgba(239,68,68,0.4); color:#ef4444; }
+    .btn-discard:hover { background:rgba(239,68,68,0.08); }
+
+    .section-header { font-size:0.82rem; font-weight:700; color:#a8b2c1; text-transform:uppercase; letter-spacing:0.06em; margin:1.25rem 0 0.5rem; }
+    .empty-state { text-align:center; padding:3rem 1rem; color:#a8b2c1; }
+</style>
+
+<div class="container py-4">
+    <div class="contacts-header">
+        <h1>@(hasMatches ? "🎯 Matches Anteriores" : "👥 Contactos Anteriores")</h1>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            @if (opportunityId.HasValue)
+            {
+                <a asp-controller="Opportunities" asp-action="Details" asp-route-id="@opportunityId" class="btn btn-sm btn-outline-secondary">← Voltar à oportunidade</a>
+            }
+            <a asp-action="Index" asp-route-companyId="@companyId" class="btn btn-sm btn-outline-secondary">Todos os contactos</a>
+            <a asp-action="Trash" asp-route-companyId="@companyId" class="btn btn-sm btn-outline-danger">🗑 Arquivo</a>
+        </div>
+    </div>
+
+    @if (hasMatches)
+    {
+        <div class="section-header">Candidatos recomendados para esta oportunidade</div>
+        @foreach (var m in matches.OrderByDescending(x => x.MatchScore))
+        {
+            var initials = string.IsNullOrWhiteSpace(m.Name) ? "?" :
+                (m.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                    ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper()) : "?");
+
+            <div class="contact-card" style="border-left:3px solid rgba(0,82,204,0.4);">
+                <div class="contact-avatar">
+                    @if (!string.IsNullOrEmpty(m.ProfilePictureUrl))
+                    { <img src="@m.ProfilePictureUrl" alt="@m.Name" /> }
+                    else { @initials }
+                </div>
+                <div class="contact-info">
+                    <a asp-controller="Users" asp-action="Details" asp-route-id="@m.UserId" class="contact-name" style="text-decoration:none;color:inherit;">@(m.Name ?? "Utilizador")</a>
+                    <div class="contact-meta">
+                        @if (!string.IsNullOrEmpty(m.LocationName)) { <span>📍 @m.LocationName@(m.CountryName != null ? $", {m.CountryName}" : "")</span> }
+                        @if (!string.IsNullOrEmpty(m.PreviousOpportunityTitle)) { <span style="margin-left:0.5rem;">🕐 Anterior: @m.PreviousOpportunityTitle (@m.PreviousOutcome)</span> }
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <span class="contact-badge badge-score">@m.MatchScore%</span>
+                    @if (m.IsAvailable) { <span class="contact-badge badge-available">✓ Disponível</span> }
+                    <span class="contact-badge badge-outcome">@(m.PreviousOutcome ?? "-")</span>
+                    <a asp-controller="Chats" asp-action="Create" asp-route-withUserId="@m.UserId" class="btn-sm-action" style="border-color:rgba(255,255,255,0.2);color:inherit;text-decoration:none;">💬 Msg</a>
+                </div>
+                <div class="contact-actions">
+                    <form method="post" asp-action="SetPriority" style="display:flex;align-items:center;gap:0.4rem;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="historyId" value="@m.EmployerCandidateHistoryId" />
+                        <input type="hidden" name="companyId" value="@companyId" />
+                        @if (opportunityId.HasValue) { <input type="hidden" name="opportunityId" value="@opportunityId" /> }
+                        <input type="number" name="priorityId" class="priority-input" value="@m.PriorityId" placeholder="Prioridade" min="0" />
+                        <button type="submit" class="btn-sm-action btn-save-priority">Definir</button>
+                    </form>
+                    <form method="post" asp-action="Discard">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="historyId" value="@m.EmployerCandidateHistoryId" />
+                        <input type="hidden" name="companyId" value="@companyId" />
+                        @if (opportunityId.HasValue) { <input type="hidden" name="opportunityId" value="@opportunityId" /> }
+                        <button type="submit" class="btn-sm-action btn-discard"
+                            onclick="return confirm('Mover para o arquivo?')">🗑</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="section-header" style="margin-top:2rem;">Todos os contactos anteriores</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">📂</div>
+            <p>Nenhum contacto registado para esta empresa.</p>
+            <small>Os contactos aparecem automaticamente após candidaturas e entrevistas.</small>
+        </div>
+    }
+    else
+    {
+        @foreach (var c in Model.OrderBy(x => x.PriorityId ?? int.MaxValue).ThenByDescending(x => x.LastContactAt))
+        {
+            var initials = string.IsNullOrWhiteSpace(c.UserName) ? "?" :
+                (c.UserName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries) is var p
+                    ? (p.Length == 1 ? p[0][..1].ToUpper() : (p[0][..1] + p[^1][..1]).ToUpper()) : "?");
+
+            <div class="contact-card">
+                <div class="contact-avatar">
+                    @if (!string.IsNullOrEmpty(c.UserPicture)) { <img src="@c.UserPicture" alt="@c.UserName" /> }
+                    else { @initials }
+                </div>
+                <div class="contact-info">
+                    <a asp-controller="Users" asp-action="Details" asp-route-id="@c.UserId" class="contact-name" style="text-decoration:none;color:inherit;">@(c.UserName ?? "Utilizador")</a>
+                    <div class="contact-meta">
+                        @if (!string.IsNullOrEmpty(c.OpportunityTitle)) { <span>Vaga: @c.OpportunityTitle</span> }
+                        @if (!string.IsNullOrEmpty(c.StageReached)) { <span style="margin-left:0.4rem;">· Fase: @c.StageReached</span> }
+                        <span style="margin-left:0.4rem;">· @c.LastContactAt.ToString("dd/MM/yyyy")</span>
+                        @if (c.PriorityId.HasValue) { <span style="margin-left:0.4rem;">· Prioridade: #@c.PriorityId</span> }
+                    </div>
+                    @if (!string.IsNullOrEmpty(c.Notes))
+                    {
+                        <div style="font-size:0.78rem;color:#a8b2c1;margin-top:0.2rem;font-style:italic;">@c.Notes</div>
+                    }
+                </div>
+                <div>
+                    <span class="contact-badge badge-outcome">@(c.Outcome ?? "-")</span>
+                </div>
+                <div class="contact-actions">
+                    <form method="post" asp-action="SetPriority" style="display:flex;align-items:center;gap:0.4rem;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="historyId" value="@c.EmployerCandidateHistoryId" />
+                        <input type="hidden" name="companyId" value="@companyId" />
+                        @if (opportunityId.HasValue) { <input type="hidden" name="opportunityId" value="@opportunityId" /> }
+                        <input type="number" name="priorityId" class="priority-input" value="@c.PriorityId" placeholder="Prioridade" min="0" />
+                        <button type="submit" class="btn-sm-action btn-save-priority">Definir</button>
+                    </form>
+                    <a asp-controller="Chats" asp-action="Create" asp-route-withUserId="@c.UserId"
+                       class="btn-sm-action" style="border-color:rgba(255,255,255,0.18);color:inherit;text-decoration:none;">💬</a>
+                    <form method="post" asp-action="Discard">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="historyId" value="@c.EmployerCandidateHistoryId" />
+                        <input type="hidden" name="companyId" value="@companyId" />
+                        @if (opportunityId.HasValue) { <input type="hidden" name="opportunityId" value="@opportunityId" /> }
+                        <button type="submit" class="btn-sm-action btn-discard"
+                            onclick="return confirm('Mover para o arquivo?')">🗑</button>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+</div>

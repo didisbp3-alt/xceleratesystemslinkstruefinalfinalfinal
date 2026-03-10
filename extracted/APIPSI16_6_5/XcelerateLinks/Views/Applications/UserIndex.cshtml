@@ -1,0 +1,195 @@
+@model IEnumerable<APIPSI16.Models.JobApplication>
+@{
+    ViewData["Title"] = "As Minhas Candidaturas";
+
+    var statusLabels = new Dictionary<byte, (string label, string color)>
+    {
+        { 0, ("Enviada", "#6b7280") },
+        { 1, ("Em análise", "#0052CC") },
+        { 2, ("Entrevista", "#7c3aed") },
+        { 3, ("Oferta", "#059669") },
+        { 4, ("Aceite", "#10b981") },
+        { 5, ("Recusada", "#ef4444") }
+    };
+}
+
+<style>
+    .myjobs-hero {
+        background: linear-gradient(135deg, rgba(0,82,204,0.12), rgba(0,221,85,0.06));
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .myjobs-hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .myjobs-hero p { color: var(--dark-text-muted,#a8b2c1); margin: 0; }
+
+    .myjobs-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0; }
+    .myjobs-tab {
+        padding: 0.5rem 1.25rem; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+        border: none; background: transparent; color: var(--dark-text-muted,#a8b2c1);
+        border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+    }
+    .myjobs-tab.active, .myjobs-tab:hover { color: #4f8ef7; border-bottom-color: #0052CC; }
+
+    .app-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 0.85rem;
+        display: flex; gap: 1.2rem; align-items: flex-start;
+        transition: border-color 0.2s;
+    }
+    .app-card:hover { border-color: rgba(0,82,204,0.35); }
+
+    .app-logo {
+        width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+        background: linear-gradient(135deg, rgba(0,82,204,0.2), rgba(0,221,85,0.1));
+        display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .app-info { flex: 1; min-width: 0; }
+    .app-title { font-size: 1rem; font-weight: 700; color: inherit; text-decoration: none; }
+    .app-title:hover { color: #4f8ef7; }
+    .app-company { font-size: 0.85rem; color: var(--dark-text-muted,#a8b2c1); margin: 0.1rem 0 0.6rem; }
+
+    .app-status {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.7rem;
+        border-radius: 30px; border: 1px solid;
+    }
+    .app-status-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    .app-meta { font-size: 0.78rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.5rem; }
+    .app-actions { display: flex; gap: 0.5rem; align-items: flex-start; flex-shrink: 0; }
+    .btn-app-detail {
+        background: transparent; border: 1px solid rgba(255,255,255,0.15); color: inherit;
+        border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.8rem; text-decoration: none;
+        white-space: nowrap; display: inline-block;
+    }
+    .btn-app-detail:hover { background: rgba(255,255,255,0.06); color: inherit; }
+    .btn-app-withdraw {
+        background: transparent; border: 1px solid rgba(239,68,68,0.3); color: #ef4444;
+        border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.8rem; text-decoration: none;
+        white-space: nowrap; display: inline-block;
+    }
+    .btn-app-withdraw:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .stat-mini { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.9rem 1rem; text-align: center; }
+    .stat-mini-num { font-size: 1.5rem; font-weight: 800; }
+    .stat-mini-label { font-size: 0.75rem; color: var(--dark-text-muted,#a8b2c1); margin-top: 0.1rem; }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--dark-text-muted,#a8b2c1); }
+    .empty-icon { font-size: 3.5rem; opacity: 0.35; margin-bottom: 1rem; }
+    .btn-browse-jobs {
+        background: #0052CC; color: #fff; border: none; border-radius: 30px;
+        padding: 0.65rem 1.8rem; font-size: 0.95rem; text-decoration: none;
+        display: inline-block; margin-top: 1rem;
+    }
+    .btn-browse-jobs:hover { background: #0040A0; color: #fff; }
+</style>
+
+<div class="container py-4">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+            ✅ @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <div class="myjobs-hero">
+        <h1>📋 As Minhas Candidaturas</h1>
+        <p>Acompanha o estado das tuas candidaturas a empregos.</p>
+    </div>
+
+    @{
+        var allApps = Model.ToList();
+        var counts = new Dictionary<byte, int>();
+        foreach (var app in allApps)
+        {
+            counts.TryGetValue(app.Status, out var c);
+            counts[app.Status] = c + 1;
+        }
+    }
+
+    @if (allApps.Any())
+    {
+        <div class="stats-row">
+            <div class="stat-mini">
+                <div class="stat-mini-num">@allApps.Count</div>
+                <div class="stat-mini-label">Total</div>
+            </div>
+            @foreach (var s in statusLabels.Where(kv => counts.ContainsKey(kv.Key)))
+            {
+                <div class="stat-mini">
+                    <div class="stat-mini-num" style="color: @s.Value.color">@counts[s.Key]</div>
+                    <div class="stat-mini-label">@s.Value.label</div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-warning">@ViewBag.Error</div>
+    }
+
+    @if (!allApps.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p class="fw-600">Ainda não te candidataste a nenhuma oportunidade.</p>
+            <p class="small">Explora as oportunidades disponíveis e submete a tua candidatura.</p>
+            <a asp-controller="Opportunities" asp-action="Index" class="btn-browse-jobs">Explorar Oportunidades</a>
+        </div>
+    }
+    else
+    {
+        <div id="apps-list">
+            @foreach (var app in allApps.OrderByDescending(a => a.AppliedAt))
+            {
+                var (label, color) = statusLabels.ContainsKey(app.Status) ? statusLabels[app.Status] : ("Desconhecido", "#6b7280");
+                var bgColor = color + "18";
+                var borderColor = color + "55";
+
+                <div class="app-card" data-status="@app.Status">
+                    <div class="app-logo">🏢</div>
+                    <div class="app-info">
+                        <a asp-action="Details" asp-route-id="@app.JobApplicationId" class="app-title">
+                            @(app.Opportunity?.Title ?? $"Oportunidade #{app.OpportunityId}")
+                        </a>
+                        <p class="app-company">@(app.Opportunity?.Company?.Name ?? "Empresa")</p>
+                        <span class="app-status" style="color: @color; background: @bgColor; border-color: @borderColor;">
+                            <span class="app-status-dot" style="background: @color;"></span>
+                            @label
+                        </span>
+                        @if (!string.IsNullOrEmpty(app.LatestEmployerMessage))
+                        {
+                            <div style="margin-top:0.4rem;font-size:0.78rem;color:#60a5fa;display:flex;align-items:center;gap:0.3rem;">
+                                💬 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px;">@app.LatestEmployerMessage</span>
+                            </div>
+                        }
+                        <div class="app-meta">
+                            Candidatado em @app.AppliedAt.ToString("d MMM yyyy")
+                            @if (!string.IsNullOrEmpty(app.Name))
+                            {
+                                <span> · @app.Name</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="app-actions">
+                        <a asp-action="Details" asp-route-id="@app.JobApplicationId" class="btn-app-detail">Ver</a>
+                        @if (app.Status == 0 || app.Status == 1)
+                        {
+                            <a asp-action="Delete" asp-route-id="@app.JobApplicationId" class="btn-app-withdraw">Retirar</a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="text-center mt-4">
+            <a asp-controller="Opportunities" asp-action="Index" class="btn-browse-jobs">Explorar mais oportunidades</a>
+        </div>
+    }
+</div>
