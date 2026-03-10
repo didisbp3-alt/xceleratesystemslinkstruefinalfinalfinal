@@ -872,3 +872,51 @@ deserialising into a C# type. `TryGetProperty` is used (rather than
 5. API returns `204 No Content`.
 6. MVC receives 204, sets `TempData["SuccessMessage"]`, and redirects to
    `/Users/Index` (the admin user list).
+
+---
+
+## SECTION 14 – TABLE NAMING IN EF CORE
+
+### Q41. Why did `DeleteUser` throw `Invalid object name 'EmployerCandidateHistories'` even though the actual SQL table is `EmployerCandidateHistory`?
+(`APIPSI16/Data/xcleratesystemslinks_SampleDBContext.cs`)
+
+**A:**
+When EF Core generates SQL for a `DbSet<T>`, it uses the `DbSet` **property
+name** as the table name unless a `ToTable("…")` mapping is explicitly
+configured in `OnModelCreating`.
+
+The `DbSet` was declared as:
+```csharp
+public virtual DbSet<EmployerCandidateHistory> EmployerCandidateHistories { get; set; }
+```
+EF Core pluralised property name → `EmployerCandidateHistories`.
+Actual SQL table name → `EmployerCandidateHistory` (no trailing 's').
+
+Because there was no `modelBuilder.Entity<EmployerCandidateHistory>` block
+at all, EF Core never knew the real table name and generated invalid SQL.
+
+The fix is to add a `ToTable()` call in `OnModelCreating`:
+```csharp
+modelBuilder.Entity<EmployerCandidateHistory>(entity =>
+{
+    entity.HasKey(e => e.EmployerCandidateHistoryId)
+          .HasName("PK__Employer__7ED6A363F8F4F90F");
+    entity.ToTable("EmployerCandidateHistory");
+});
+```
+`ToTable("EmployerCandidateHistory")` tells EF Core the real table name so
+every generated SQL statement — `SELECT`, `DELETE`, `UPDATE` — uses the
+correct name.
+
+### Q42. Why do some `DbSet` property names differ from the SQL table names in this project?
+
+**A:**
+C# convention for collections is the plural form (`EmployerCandidateHistories`,
+`AuditLogs`), while SQL table names may be singular or follow a different
+naming convention chosen when the database was first designed. EF Core's
+default is to use the `DbSet` property name, so whenever the two differ you
+**must** add `entity.ToTable("ActualTableName")` in `OnModelCreating`.
+This is exactly why all other tables in this project have explicit `ToTable`
+entries (e.g. `entity.ToTable("AuditLog")`, `entity.ToTable("Chat")`) —
+`EmployerCandidateHistory` was simply missing its entry.
+

@@ -186,6 +186,12 @@ public partial class xcleratesystemslinks_SampleDBContext : DbContext
                 .HasColumnType("datetime");
         });
 
+        modelBuilder.Entity<EmployerCandidateHistory>(entity =>
+        {
+            entity.HasKey(e => e.EmployerCandidateHistoryId).HasName("PK__Employer__7ED6A363F8F4F90F");
+            entity.ToTable("EmployerCandidateHistory");
+        });
+
         modelBuilder.Entity<Country>(entity =>
         {
             entity.HasKey(e => e.CountryId).HasName("PK__Countries__CountryId");
