@@ -704,6 +704,12 @@ namespace APIPSI16.Controllers
                     .Where(h => h.UserId == id)
                     .ExecuteDeleteAsync();
 
+                // Null out InterviewerUserId for rounds where this user is assigned as interviewer
+                // (InterviewerUserId is nullable with a NO ACTION FK — must be cleared before the user row is deleted).
+                await _context.InterviewRounds
+                    .Where(r => r.InterviewerUserId == id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.InterviewerUserId, (int?)null));
+
                 // InterviewRounds must be deleted before JobApplications because
                 // InterviewRound.JobApplicationId is non-nullable with NO ACTION.
                 var userApplicationIds = _context.JobApplications
@@ -774,6 +780,15 @@ namespace APIPSI16.Controllers
                 await _context.PostReactions
                     .Where(r => r.UserId == id || userPostIds.Contains(r.PostId))
                     .ExecuteDeleteAsync();
+                // Null out ParentCommentId for any replies that reference this user's comments.
+                // PostComment.ParentCommentId is a self-referencing nullable FK with NO ACTION;
+                // deleting the parent while a child still points to it would cause a constraint violation.
+                var userCommentIds = _context.PostComments
+                    .Where(c => c.UserId == id)
+                    .Select(c => c.CommentId);
+                await _context.PostComments
+                    .Where(c => c.ParentCommentId != null && userCommentIds.Contains(c.ParentCommentId.Value))
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.ParentCommentId, (int?)null));
                 await _context.PostComments
                     .Where(c => c.UserId == id || userPostIds.Contains(c.PostId))
                     .ExecuteDeleteAsync();

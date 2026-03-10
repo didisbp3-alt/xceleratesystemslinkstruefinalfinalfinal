@@ -379,7 +379,7 @@ namespace XcelerateLinks.Mvc.Controllers
             return View(user);
         }
 
-        [HttpPost, ActionName("Delete")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -395,7 +395,7 @@ namespace XcelerateLinks.Mvc.Controllers
             if (!resp.IsSuccessStatusCode)
             {
                 TempData["ErrorMessage"] = await SafeReadStringAsync(resp) ?? "Unable to delete user.";
-                return RedirectToAction(nameof(Details), new { id });
+                return RedirectToAction(nameof(Delete), new { id });
             }
 
             TempData["SuccessMessage"] = "User deleted successfully.";

@@ -5,6 +5,11 @@
 
 <h2>Apagar Utilizador</h2>
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
 <div class="alert alert-warning">
     Tens a certeza que queres apagar este utilizador?
 </div>
@@ -17,9 +22,8 @@
     <dd class="col-sm-10">@Model.Email</dd>
 </dl>
 
-<form asp-action="Delete" method="post" class="d-inline">
+<form asp-action="DeleteConfirmed" asp-route-id="@Model.UserId" method="post" class="d-inline">
     @Html.AntiForgeryToken()
-    <input type="hidden" name="id" value="@Model.UserId" />
     <button type="submit" class="btn btn-danger">Apagar</button>
 </form>
 
